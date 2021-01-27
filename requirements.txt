@@ -1,0 +1,9 @@
+requests
+finviz
+httplib2
+google-api-python-client
+oauth2client
+asyncio
+aiogram
+matplotlib
+secure-smtplib
