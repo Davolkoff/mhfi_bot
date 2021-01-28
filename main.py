@@ -2,12 +2,10 @@
 
 import io  # библиотека для работы с оперативной памятью
 import logging  # библиотека для логов
-import os  # библиотека для работы с файлами, системой
 import re  # библиотека для работы со строками
 import asyncio  # библиотека для постоянно повторяющегося прохода по алертам
 import datetime  # библиотека для получения даты
 import random  # библиотека для получения случайного числа
-from PIL import Image,ImageTk  # библиотека для работы с изображениями
 
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP  # измененная библиотека telegram - календаря
 from aiogram import Bot, Dispatcher, executor, types  # библиотека для работы с телеграмом
@@ -17,8 +15,7 @@ from aiogram.dispatcher import FSMContext  # машина состояний
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 import requests.packages.urllib3  # её я использовал для того, чтобы "небезопасные" запросы в finviz работали
 
-import numpy as np  # библиотека для математических операций, выступает дополнением для matplotlit
-import matplotlib.pyplot as plt  # библиотека для создания графиков
+
 # -----------------------------------------ПОДКЛЮЧЕННЫЕ ФАЙЛЫ---------------------------------------------
 
 
