@@ -198,7 +198,7 @@ class Database:
         try:
             with self.connection:
                 return self.cursor.execute("SELECT * FROM `portfolios` WHERE `user_id` = ? ORDER BY portfolio_id "
-                                           "DESC", (user_id,)).fetchone()[0]
+                                           "DESC", (user_id,)).fetchone()[1]
         except:
             return 0
 
@@ -207,7 +207,7 @@ class Database:
         try:
             with self.connection:
                 return self.cursor.execute("SELECT * FROM `portfolios` WHERE `user_id` = ? ORDER BY "
-                                           "individual_portfolio_id DESC", (user_id,)).fetchone()[0]
+                                           "individual_portfolio_id DESC", (user_id,)).fetchone()[2]
         except:
             return 0
 
