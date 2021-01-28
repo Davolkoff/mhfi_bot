@@ -1,22 +1,24 @@
 # ---------------------------------------ПОДКЛЮЧЕННЫЕ БИБЛИОТЕКИ------------------------------------------
 
-
+import io  # библиотека для работы с оперативной памятью
 import logging  # библиотека для логов
 import os  # библиотека для работы с файлами, системой
 import re  # библиотека для работы со строками
 import asyncio  # библиотека для постоянно повторяющегося прохода по алертам
 import datetime  # библиотека для получения даты
 import random  # библиотека для получения случайного числа
+from PIL import Image,ImageTk  # библиотека для работы с изображениями
 
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP  # измененная библиотека telegram - календаря
 from aiogram import Bot, Dispatcher, executor, types  # библиотека для работы с телеграмом
 from aiogram.dispatcher.filters.state import State, StatesGroup  # машина состояний
 from aiogram.contrib.fsm_storage.memory import MemoryStorage  # управление памятью
 from aiogram.dispatcher import FSMContext  # машина состояний
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 import requests.packages.urllib3  # её я использовал для того, чтобы "небезопасные" запросы в finviz работали
 
-
+import numpy as np  # библиотека для математических операций, выступает дополнением для matplotlit
+import matplotlib.pyplot as plt  # библиотека для создания графиков
 # -----------------------------------------ПОДКЛЮЧЕННЫЕ ФАЙЛЫ---------------------------------------------
 
 
@@ -149,11 +151,14 @@ async def receive_ticker_info(message: types.Message, state: FSMContext):
 @dp.callback_query_handler(lambda call: True)
 async def callback_inline(call):
     global active_id
-
     # главное меню
     if call.data == "my_stocks":
-        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                    text=messages.my_stocks, reply_markup=kb.my_stocks_menu)
+        media = [InputMediaPhoto(io.BufferedReader(plot.pie([10, 5, 9], ["fewf", "fqwef", "fqefq"], "wfew"))),
+                 InputMediaPhoto(io.BufferedReader(plot.pie([30, 40, 50], ["fedsadf", "fqddd", "faaa"], "sdsakmk"))),
+                 InputMediaPhoto(io.BufferedReader(plot.pie([3, 6, 1], ["осм назв", "авы", "ыфйъ"], "выфвыфw")))]
+        await bot.send_media_group(call.message.chat.id, media)
+        media.clear()
+        await bot.send_message(chat_id=call.message.chat.id, text=messages.my_stocks, reply_markup=kb.my_stocks_menu)
     if call.data == "info":
         await Info.receive_ticker.set()
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode='HTML',
@@ -710,10 +715,8 @@ async def alert_check_mail(message: types.Message, state: FSMContext):
 @dp.message_handler(content_types=['text'])
 async def send_text(message: types.message):
     if message.text == 'График':
-        await plot.pie([60, 100, 5], ["Банки", "IT", "Телекоммуникации"], str(message.from_user.id))
-        full_name = str(message.from_user.id) + '_pie.png'
-        await bot.send_photo(message.from_user.id, open(full_name, 'rb'))
-        os.remove(str(message.from_user.id) + '_pie.png')
+        #await bot.send_photo(message.from_user.id, plot.buf.read())
+        await bot.send_message(message.from_user.id, "Нет")
     elif " price" in message.text:
         ticker = re.sub(' price', '', message.text)
         await bot.send_message(message.from_user.id, sm.price_spr(ticker))
@@ -773,6 +776,7 @@ async def alert_vol(delay):
                         mail.send_message(db.get_email(selectedNote[1]),
                                           messages.mail_volume_alert_message(selectedTicker, selectedNote[5]))
                     db.alert_off(selectedNote[1], selectedNote[7])
+            sm.finviz_clear_cache()
 
 
 # функция алертов, исполняющаяся раз в день, отвечающая за отключение просроченных алертов

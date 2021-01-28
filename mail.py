@@ -5,7 +5,6 @@ from settings import email_login, email_password
 from re import *
 
 
-
 # самая базовая проверка на то, является ли строка почтой
 def is_email(email):
     pattern = compile('(^|\s)[-a-z0-9_.]+@([-a-z0-9]+\.)+[a-z]{2,6}(\s|$)')

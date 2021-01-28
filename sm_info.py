@@ -131,7 +131,8 @@ def comp_name(ticker):
 
 # получение значения volume из finviz
 def finviz_volume(ticker):
-    return int(str(finviz.get_stock(ticker)["Volume"]).replace(",", ""))
+    volume = int(str(finviz.get_stock(ticker)["Volume"]).replace(",", ""))
+    return volume
 
 
 # получение значения average volume из finviz
@@ -191,3 +192,8 @@ def day_price_change_percent(ticker):
         answer = requests.get(
             "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price").content
         return float(str(json.loads(answer)["quoteSummary"]["result"][0]['price']['regularMarketChangePercent']['fmt']).replace("%",""))
+
+
+# очистка кэша finviz
+def finviz_clear_cache():
+    finviz.main_func.STOCK_PAGE.clear()

@@ -188,6 +188,38 @@ class Database:
                                        "WHERE `individual_alert_id` = ? AND `user_id` = ?",
                                        (True, None, individual, owner))
 
+    # проверка, существует ли такое название инвестиционного портфеля
+    def portfolio_name_exists(self, name):
+        with self.connection:
+            return bool(self.cursor.execute("SELECT * FROM `portfolios` WHERE `portfolio_name` = ?", (name,)))
+
+    # получение id последнего портфеля
+    def last_portfolio_id(self, user_id):
+        try:
+            with self.connection:
+                return self.cursor.execute("SELECT * FROM `portfolios` WHERE `user_id` = ? ORDER BY portfolio_id "
+                                           "DESC", (user_id,)).fetchone()[0]
+        except:
+            return 0
+
+    # получение индивидульного id последнего портфеля
+    def last_individual_portfolio_id(self, user_id):
+        try:
+            with self.connection:
+                return self.cursor.execute("SELECT * FROM `portfolios` WHERE `user_id` = ? ORDER BY "
+                                           "individual_portfolio_id DESC", (user_id,)).fetchone()[0]
+        except:
+            return 0
+
+    # добавление портфеля
+    def add_portfolio(self, user_id, portfolio_name):
+        individual_id = Database.last_individual_portfolio_id(self, user_id) + 1
+        portfolio_id = Database.last_portfolio_id(self, user_id) + 1
+        with self.connection:
+            return self.cursor.execute("INSERT INTO `portfolios` (`user_id`, `portfolio_id`, "
+                                       "`individual_portfolio_id`, `portfolio_name`) VALUES(?,?,?,?,?)",
+                                       (user_id, portfolio_id, individual_id, portfolio_name))
+
     # закрытие соединения с БД
     def close(self):
         self.connection.close()
