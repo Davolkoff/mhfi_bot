@@ -191,7 +191,7 @@ class Database:
     # проверка, существует ли такое название инвестиционного портфеля
     def portfolio_name_exists(self, name):
         with self.connection:
-            return bool(self.cursor.execute("SELECT * FROM `portfolios` WHERE `portfolio_name` = ?", (name,)))
+            return bool(len(self.cursor.execute("SELECT * FROM `portfolios` WHERE `portfolio_name` = ?", (name,)).fetchall()))
 
     # получение id последнего портфеля
     def last_portfolio_id(self, user_id):
@@ -217,8 +217,38 @@ class Database:
         portfolio_id = Database.last_portfolio_id(self, user_id) + 1
         with self.connection:
             return self.cursor.execute("INSERT INTO `portfolios` (`user_id`, `portfolio_id`, "
-                                       "`individual_portfolio_id`, `portfolio_name`) VALUES(?,?,?,?,?)",
+                                       "`individual_portfolio_id`, `portfolio_name`) "
+                                       "VALUES(?,?,?,?)",
                                        (user_id, portfolio_id, individual_id, portfolio_name))
+
+    # проверка наличия портфелей у пользователя
+    def user_has_portfolios(self, user_id):
+        with self.connection:
+            return bool(len(self.cursor.execute("SELECT * FROM `portfolios` WHERE user_id = ?", (user_id,)).fetchall()))
+
+    # получение портфелей, принадлежащих пользователю
+    def user_portfolios(self, user_id):
+        with self.connection:
+            return self.cursor.execute("SELECT * FROM `portfolios` WHERE user_id = ?", (user_id,)).fetchall()
+
+    # получение валют, находящихся в портфеле
+    def portfolio_wallets(self, user_id, individual_portfolio_id):
+        with self.connection:
+            wallets = []
+            message = ""
+            portfolios = self.cursor.execute("SELECT * FROM `stocks_notes` WHERE `individual_portfolio_id` = ? AND "
+                                             "`user_id` = ?", (individual_portfolio_id, user_id)).fetchall()
+            for selected_portfolio in portfolios:
+                wallets.append(selected_portfolio[2])
+            for wallet in list(set(wallets)):
+                message += wallet + ","
+            return message[:-1]
+
+    # проверка, есть ли в портфеле бумаги
+    def portolio_has_stocks(self, user_id, individual_portfolio_id):
+        with self.connection:
+            return bool(len(self.cursor.execute("SELECT * FROM `stocks_notes` WHERE `individual_portfolio_id` = ? AND "
+                                                "`user_id` = ?", (individual_portfolio_id, user_id)).fetchall()))
 
     # закрытие соединения с БД
     def close(self):

@@ -6,13 +6,13 @@ backToMainMenu = InlineKeyboardButton('⬅ Главное меню', callback_da
 backToAlMenu = InlineKeyboardButton('⬅ Меню алертов', callback_data='alerts')
 
 # инициализация клавиатуры главного меню
-my_stocks = InlineKeyboardButton('Мой инвестиционный портфель', callback_data='my_stocks')
+my_portfolios = InlineKeyboardButton('Мои инвестиционные портфели', callback_data='my_portfolios')
 info = InlineKeyboardButton('Информация о ценной бумаге', callback_data='info')
 alerts = InlineKeyboardButton('Алерты', callback_data='alerts')
 about_us = InlineKeyboardButton('О нас', callback_data='about_us')
 feedback = InlineKeyboardButton('Обратная связь', callback_data='feedback')
 settings = InlineKeyboardButton('Настройки', callback_data='settings')
-mainMenu = InlineKeyboardMarkup(row_width=1).add(my_stocks, info, alerts, about_us, feedback, settings)
+mainMenu = InlineKeyboardMarkup(row_width=1).add(my_portfolios, info, alerts, about_us, feedback, settings)
 
 
 # инициализация меню алертов
@@ -25,8 +25,8 @@ alMenu = InlineKeyboardMarkup(row_width=1).add(active_alerts, executed_alerts, a
 univAlMenu = InlineKeyboardMarkup(row_width=1).add(backToAlMenu, backToMainMenu)
 
 # инициализация меню моего инвестиционного портфеля
-change_stocks = InlineKeyboardButton('Изменить', callback_data='change_stocks')
-my_stocks_menu = InlineKeyboardMarkup(row_width=1).add(change_stocks, backToMainMenu)
+add_portfolio = InlineKeyboardButton('Создать инвестиционный портфель', callback_data='add_portfolio')
+my_portfolios_menu = InlineKeyboardMarkup(row_width=1).add(add_portfolio, backToMainMenu)
 
 # инициализация меню выбора режима алертов
 reaching = InlineKeyboardButton('Достижение цены', callback_data='reaching')
@@ -93,3 +93,12 @@ edit_executed_alert_menu = InlineKeyboardMarkup(row_width=1).add(reactivate_aler
 
 # инициализация меню подтверждения удаления
 delete_menu = InlineKeyboardMarkup(row_width=1).add(accept, cancel)
+
+
+# инициализация меню редактирования портфеля
+add_stock = InlineKeyboardButton('Добавить ценную бумагу', callback_data='add_stock')
+add_dividend = InlineKeyboardButton('Добавить дивиденд', callback_data='add_dividend')
+add_money = InlineKeyboardButton('Добавить деньги', callback_data='add_money')
+delete_portfolio = InlineKeyboardButton('Удалить инвестиционный портфель', callback_data='delete_portfolio')
+edit_portfolio_menu = InlineKeyboardMarkup(row_width=1).add(add_stock, add_dividend, add_money, delete_portfolio,
+                                                            backToMainMenu)

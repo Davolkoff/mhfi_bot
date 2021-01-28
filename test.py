@@ -1,3 +1,5 @@
-import sm_info as sm
+from db_manipulator import Database
+from settings import owner
+db = Database('users.db')
 
-print(sm.ytd_return("VTI"))
+print(db.user_portfolios(owner))

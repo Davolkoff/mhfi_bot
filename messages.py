@@ -10,7 +10,7 @@ main_menu = "ГЛАВНОЕ МЕНЮ"
 not_mail = "Введите корректный адрес электронной почты"
 email_enter = "Введите адрес электронной почты, на который вы хотите получать алерты"
 about_us = "Здесь будет размещена информация о нас"
-my_stocks = """Здесь будет текст калькулятора"""
+
 alerts = """
 Здесь будет размещена информация об алертах
 """
@@ -288,3 +288,23 @@ def ticker_info(ticker):
     if not "." in ticker and ticker not in tickers.moex_tickers:
         message += f"\n<b>Zacks rank:</b> {sm.zacks_rank(ticker)}"
     return message
+
+
+def my_portfolios(user_id):
+    if db.user_has_portfolios(user_id):
+        portfolios = db.user_portfolios(user_id)
+        message = "<u><b>Мои инвестиционные портфели:</b></u>\n\n/"
+        for selected_portfolio in portfolios:
+            if db.portolio_has_stocks(user_id, selected_portfolio[2]):
+                message += f"{selected_portfolio[2]}_portfolio\n<b>Название портфеля: </b>{selected_portfolio[3]}\n" \
+                           f"<b>Валюты: </b>{db.portfolio_wallets(user_id, selected_portfolio[2])}\n<b>Сумма: </b>\n\n/"
+            else:
+                message += f"{selected_portfolio[2]}_portfolio\n<b>Название портфеля: </b>{selected_portfolio[3]}\n" \
+                           f"Портфель пуст\n\n/"
+        return message[:-1]
+    else:
+        return "Инвестиционные портфели пока не добавлены"
+
+
+def portfolio_full_info(user_id, individual_portfolio_id):
+    return "."

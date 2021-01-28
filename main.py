@@ -96,6 +96,11 @@ class EmailChange(StatesGroup):
     check = State()
 
 
+# состояние для добавления инвестиционного портфеля
+class AddPortfolio(StatesGroup):
+    name = State()
+
+
 # ------------------------------------------ОБРАБОТЧИКИ КОМАНД----------------------------------------------
 
 
@@ -149,13 +154,15 @@ async def receive_ticker_info(message: types.Message, state: FSMContext):
 async def callback_inline(call):
     global active_id
     # главное меню
-    if call.data == "my_stocks":
-        media = [InputMediaPhoto(io.BufferedReader(plot.pie([10, 5, 9], ["fewf", "fqwef", "fqefq"], "wfew"))),
-                 InputMediaPhoto(io.BufferedReader(plot.pie([30, 40, 50], ["fedsadf", "fqddd", "faaa"], "sdsakmk"))),
-                 InputMediaPhoto(io.BufferedReader(plot.pie([3, 6, 1], ["осм назв", "авы", "ыфйъ"], "выфвыфw")))]
-        await bot.send_media_group(call.message.chat.id, media)
-        media.clear()
-        await bot.send_message(chat_id=call.message.chat.id, text=messages.my_stocks, reply_markup=kb.my_stocks_menu)
+    if call.data == "my_portfolios":
+        #media = [InputMediaPhoto(io.BufferedReader(plot.pie([10, 5, 9], ["fewf", "fqwef", "fqefq"], "wfew"))),
+        #         InputMediaPhoto(io.BufferedReader(plot.pie([30, 40, 50], ["fedsadf", "fqddd", "faaa"], "sdsakmk"))),
+        #         InputMediaPhoto(io.BufferedReader(plot.pie([3, 6, 1], ["осм назв", "авы", "ыфйъ"], "выфвыфw")))]
+        #await bot.send_media_group(call.message.chat.id, media)
+        #media.clear()
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text=messages.my_portfolios(call.message.chat.id), parse_mode='HTML',
+                                    reply_markup=kb.my_portfolios_menu)
     if call.data == "info":
         await Info.receive_ticker.set()
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode='HTML',
@@ -182,6 +189,12 @@ async def callback_inline(call):
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text=messages.settings_menu(call.message.chat.id),
                                     reply_markup=kb.settings_menu, parse_mode="HTML")
+
+    # меню инвестиционных портфелей
+    if call.data == "add_portfolio":
+        await AddPortfolio.name.set()
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text="Введите название портфеля: ")
 
     # меню алертов
     if call.data == "active_alerts":
@@ -273,6 +286,18 @@ async def callback_inline(call):
                                         text=messages.settings_menu(call.message.chat.id),
                                         reply_markup=kb.settings_menu, parse_mode="HTML")
 
+
+#----------------------------------------ДОБАВЛЕНИЕ НОВОГО ПОРТФЕЛЯ---------------------------------------
+
+
+# получение названия портфеля
+@dp.message_handler(state=AddPortfolio.name, content_types=types.ContentTypes.TEXT)
+async def portfolio_name(message: types.Message, state: FSMContext):
+    db.add_portfolio(message.from_user.id, message.text)
+    await bot.send_message(message.from_user.id, "Портфель добавлен")
+    await bot.send_message(chat_id=message.from_user.id, text=messages.my_portfolios(message.from_user.id),
+                           parse_mode='HTML', reply_markup=kb.my_portfolios_menu)
+    await state.finish()
 
 # --------------------------------------------ДОБАВЛЕНИЕ АЛЕРТА-------------------------------------------
 
@@ -457,7 +482,7 @@ async def accept_alert(call, state: FSMContext):
         await AddAlert.first()
 
 
-# ----------------------------------------РЕДАКТИРОВАНИЕ АЛЕРТА-------------------------------------------
+# ------------------------------------РЕДАКТИРОВАНИЕ АЛЕРТА ИЛИ ПОРТФЕЛЯ----------------------------------
 
 
 # команды, отвечающие за редактирование алертов
@@ -473,6 +498,11 @@ async def alerts_editor(message: types.message):
         await bot.send_message(message.from_user.id, messages.alert_full_info(message.from_user.id,
                                                                               re.sub("\D", "", message.text)),
                                reply_markup=kb.edit_executed_alert_menu, parse_mode='HTML')
+        active_id = re.sub("\D", "", message.text)
+    elif re.sub(r'[^\w\s]+|[\d]+', r'', message.text).strip() == "_portfolio":
+        await bot.send_message(message.from_user.id, messages.portfolio_full_info(message.from_user.id,
+                                                                              re.sub("\D", "", message.text)),
+                               reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
         active_id = re.sub("\D", "", message.text)
 
 
