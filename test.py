@@ -1,5 +1,7 @@
 from db_manipulator import Database
 from settings import owner
+
+import messages
 db = Database('users.db')
 
-print(db.user_portfolios(owner))
+print(messages.my_portfolios(owner))

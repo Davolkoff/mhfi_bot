@@ -121,14 +121,6 @@ def ticker_exists(ticker):
     except:
         return False
 
-
-# полное название компании
-def comp_name(ticker):
-    answer = requests.get(
-        "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price").content
-    return json.loads(answer)["quoteSummary"]["result"][0]["price"]["shortName"]
-
-
 # получение значения volume из finviz
 def finviz_volume(ticker):
     volume = int(str(finviz.get_stock(ticker)["Volume"]).replace(",", ""))
@@ -193,6 +185,17 @@ def day_price_change_percent(ticker):
             "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price").content
         return float(str(json.loads(answer)["quoteSummary"]["result"][0]['price']['regularMarketChangePercent']['fmt']).replace("%",""))
 
+
+# попытка сделать из числа float
+def try_float(string):
+    try:
+        if "," in string:
+            string = string.replace(",",".")
+        if " " in string:
+            string = string.replace(" ","")
+        return float(string)
+    except:
+        return False
 
 # очистка кэша finviz
 def finviz_clear_cache():

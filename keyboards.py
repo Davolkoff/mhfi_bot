@@ -6,12 +6,12 @@ backToMainMenu = InlineKeyboardButton('⬅ Главное меню', callback_da
 backToAlMenu = InlineKeyboardButton('⬅ Меню алертов', callback_data='alerts')
 
 # инициализация клавиатуры главного меню
-my_portfolios = InlineKeyboardButton('Мои инвестиционные портфели', callback_data='my_portfolios')
-info = InlineKeyboardButton('Информация о ценной бумаге', callback_data='info')
-alerts = InlineKeyboardButton('Алерты', callback_data='alerts')
-about_us = InlineKeyboardButton('О нас', callback_data='about_us')
-feedback = InlineKeyboardButton('Обратная связь', callback_data='feedback')
-settings = InlineKeyboardButton('Настройки', callback_data='settings')
+my_portfolios = InlineKeyboardButton('💼Мои инвестиционные портфели', callback_data='my_portfolios')
+info = InlineKeyboardButton('📑Информация о ценной бумаге', callback_data='info')
+alerts = InlineKeyboardButton('🚨Алерты', callback_data='alerts')
+about_us = InlineKeyboardButton('🎩О нас', callback_data='about_us')
+feedback = InlineKeyboardButton('☎️Обратная связь', callback_data='feedback')
+settings = InlineKeyboardButton('🛠Настройки', callback_data='settings')
 mainMenu = InlineKeyboardMarkup(row_width=1).add(my_portfolios, info, alerts, about_us, feedback, settings)
 
 
@@ -47,7 +47,17 @@ feedback_menu = InlineKeyboardMarkup(row_width=1).add(backToMainMenu)
 accept = InlineKeyboardButton('Подтвердить', callback_data='accept')
 edit_alert = InlineKeyboardButton('Заполнить заново', callback_data='edit_alert')
 cancel = InlineKeyboardButton('Отмена', callback_data='cancel')
-accept_menu = InlineKeyboardMarkup(row_width=1).add(accept, edit_alert, cancel)
+alert_accept_menu = InlineKeyboardMarkup(row_width=1).add(accept, edit_alert, cancel)
+
+
+# инициализация клавиатуры подтверждения добавления ценной бумаги
+edit_stock = InlineKeyboardButton('Заполнить заново', callback_data='edit_stock')
+stock_accept_menu = InlineKeyboardMarkup(row_width=1).add(accept, edit_stock, cancel)
+
+
+# инициализация клавиатуры подтверждения добавления денег в портфель
+edit_money = InlineKeyboardButton('Заполнить заново', callback_data='edit_money')
+money_accept_menu = InlineKeyboardMarkup(row_width=1).add(accept, edit_money, cancel)
 
 
 # инициализация клавиатуры с выбором типа алерта
@@ -62,7 +72,7 @@ standart_kb = InlineKeyboardMarkup().add(main_menu_button)
 
 
 # инициализация меню настроек
-mail_alert = InlineKeyboardButton("Дублировать алерт на электронную почту: ВЫКЛ", callback_data='mail_alert')
+mail_alert = InlineKeyboardButton("🔕Дублировать алерт на электронную почту: ВЫКЛ", callback_data='mail_alert')
 add_mail = InlineKeyboardButton("Добавить адрес электронной почты", callback_data='add_mail')
 settings_menu = InlineKeyboardMarkup(row_width=1).add(mail_alert, add_mail, backToMainMenu)
 
@@ -84,8 +94,8 @@ edit_active_alert_menu = InlineKeyboardMarkup(row_width=1).add(edit_ticker, edit
 
 
 # инициализация меню редактирования выполненного алерта
-reactivate_alert = InlineKeyboardButton('Активировать алерт', callback_data='reactivate_alert')
-delete_alert = InlineKeyboardButton('Удалить алерт', callback_data='delete_alert')
+reactivate_alert = InlineKeyboardButton('🚨Активировать алерт', callback_data='reactivate_alert')
+delete_alert = InlineKeyboardButton('❌Удалить алерт', callback_data='delete_alert')
 back_to_executed_alerts = InlineKeyboardButton('⬅ Назад', callback_data='executed_alerts')
 edit_executed_alert_menu = InlineKeyboardMarkup(row_width=1).add(reactivate_alert, delete_alert,
                                                                  back_to_executed_alerts)
@@ -96,9 +106,32 @@ delete_menu = InlineKeyboardMarkup(row_width=1).add(accept, cancel)
 
 
 # инициализация меню редактирования портфеля
-add_stock = InlineKeyboardButton('Добавить ценную бумагу', callback_data='add_stock')
-add_dividend = InlineKeyboardButton('Добавить дивиденд', callback_data='add_dividend')
-add_money = InlineKeyboardButton('Добавить деньги', callback_data='add_money')
-delete_portfolio = InlineKeyboardButton('Удалить инвестиционный портфель', callback_data='delete_portfolio')
-edit_portfolio_menu = InlineKeyboardMarkup(row_width=1).add(add_stock, add_dividend, add_money, delete_portfolio,
-                                                            backToMainMenu)
+add_stock = InlineKeyboardButton('🟢⚖️Купить ценную бумагу', callback_data='add_stock')
+del_stock = InlineKeyboardButton('🔴⚖️Продать ценную бумагу', callback_data='del_stock')
+add_dividend = InlineKeyboardButton('🟢💸Добавить дивиденд', callback_data='add_dividend')
+del_dividend = InlineKeyboardButton('🔴💸Удалить дивиденд', callback_data='del_dividend')
+add_money = InlineKeyboardButton('🟢💰Внести деньги', callback_data='add_money')
+del_money = InlineKeyboardButton('🔴💰Забрать деньги', callback_data='del_money')
+delete_portfolio = InlineKeyboardButton('❌Удалить инвестиционный портфель', callback_data='delete_portfolio')
+back_to_my_portfolios = InlineKeyboardButton('⬅ Инвестиционные портфели', callback_data='my_portfolios')
+edit_portfolio_menu = InlineKeyboardMarkup().add(add_stock, del_stock).add(add_dividend, del_dividend).add(add_money,
+                                                                                                           del_money).\
+    add(delete_portfolio).add(back_to_my_portfolios).add(backToMainMenu)
+
+
+# инициализация клавиатуры с выбором валют
+usd_wallet = InlineKeyboardButton("USD", callback_data='usd_wallet')
+rub_wallet = InlineKeyboardButton("RUB", callback_data='rub_wallet')
+eur_wallet = InlineKeyboardButton("EUR", callback_data='eur_wallet')
+wallet_menu = InlineKeyboardMarkup(row_width=3).add(usd_wallet, rub_wallet, eur_wallet)
+
+
+def adaptive_wallet_keyboard(wallets):
+    adaptive_wallet_menu = InlineKeyboardMarkup()
+    if "USD" in wallets:
+        adaptive_wallet_menu.add(usd_wallet)
+    if "RUB" in wallets:
+        adaptive_wallet_menu.add(rub_wallet)
+    if "EUR" in wallets:
+        adaptive_wallet_menu.add(eur_wallet)
+    return adaptive_wallet_menu

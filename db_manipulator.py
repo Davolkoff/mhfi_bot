@@ -189,9 +189,10 @@ class Database:
                                        (True, None, individual, owner))
 
     # проверка, существует ли такое название инвестиционного портфеля
-    def portfolio_name_exists(self, name):
+    def portfolio_name_exists(self, user_id, name):
         with self.connection:
-            return bool(len(self.cursor.execute("SELECT * FROM `portfolios` WHERE `portfolio_name` = ?", (name,)).fetchall()))
+            return bool(len(self.cursor.execute("SELECT * FROM `portfolios` WHERE `user_id` = ? "
+                                                "AND `portfolio_name` = ?", (user_id, name)).fetchall()))
 
     # получение id последнего портфеля
     def last_portfolio_id(self, user_id):
@@ -239,16 +240,216 @@ class Database:
             portfolios = self.cursor.execute("SELECT * FROM `stocks_notes` WHERE `individual_portfolio_id` = ? AND "
                                              "`user_id` = ?", (individual_portfolio_id, user_id)).fetchall()
             for selected_portfolio in portfolios:
-                wallets.append(selected_portfolio[2])
+                wallets.append(selected_portfolio[3])
             for wallet in list(set(wallets)):
-                message += wallet + ","
-            return message[:-1]
+                message += wallet + ", "
+            return message[:-2]
 
     # проверка, есть ли в портфеле бумаги
-    def portolio_has_stocks(self, user_id, individual_portfolio_id):
+    def portfolio_has_stocks(self, user_id, individual_portfolio_id):
         with self.connection:
             return bool(len(self.cursor.execute("SELECT * FROM `stocks_notes` WHERE `individual_portfolio_id` = ? AND "
-                                                "`user_id` = ?", (individual_portfolio_id, user_id)).fetchall()))
+                                                "`user_id` = ? AND NOT `ticker` = ?", (individual_portfolio_id, user_id,
+                                                                                       "money")).fetchall()))
+
+    # проверка, есть ли в портфеле бумаги
+    def portfolio_has_money(self, user_id, individual_portfolio_id):
+        with self.connection:
+            return bool(len(self.cursor.execute("SELECT * FROM `stocks_notes` WHERE `individual_portfolio_id` = ? AND "
+                                        "`user_id` = ? AND `ticker` = ?", (individual_portfolio_id, user_id,
+                                                                               "money")).fetchall()))
+
+    # удаление портфеля
+    def delete_portfolio(self, user_id, individual_portfolio_id):
+        with self.connection:
+            self.cursor.execute("DELETE  FROM `stocks_notes` WHERE `user_id` = ? AND `individual_portfolio_id` = ?",
+                                (user_id, individual_portfolio_id))
+            return self.cursor.execute("DELETE  FROM `portfolios` WHERE `user_id` = ? AND `individual_portfolio_id` "
+                                       "= ?", (user_id, individual_portfolio_id))
+
+    # проверка, есть ли такая бумага у пользователя в этом портфеле
+    def ticker_exists_in_portfolio(self, user_id, individual_portfolio_id, ticker):
+        with self.connection:
+            return bool(len(self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                    "`individual_portfolio_id` = ? AND `ticker` = ?",
+                                                    (user_id, individual_portfolio_id, ticker)).fetchall()))
+
+    # добавление бумаги в портфель
+    def add_stock(self, user_id, individual_portfolio_id, ticker, currency, value):
+        if Database.ticker_exists_in_portfolio(self, user_id, individual_portfolio_id, ticker):
+            with self.connection:
+                stock_info = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                     "`individual_portfolio_id` = ? AND `ticker` = ?",
+                                                     (user_id, individual_portfolio_id, ticker)).fetchall()
+                edited_value = int(stock_info[0][5]) + int(value)
+                edited_currency = round((float(stock_info[0][4])*float(stock_info[0][5]) + float(currency)*float(value)) / float(edited_value), 2)
+                return self.connection.execute("UPDATE `stocks_notes` SET `currency` = ?, `value` = ? WHERE "
+                                               "`user_id` = ? AND `individual_portfolio_id` = ? AND `ticker` = ?",
+                                               (edited_currency, edited_value, user_id, individual_portfolio_id, ticker))
+        else:
+            with self.connection:
+                return self.connection.execute("INSERT INTO `stocks_notes` (user_id, individual_portfolio_id, ticker, "
+                                               "wallet, currency, value) VALUES(?,?,?,?,?,?)",
+                                               (user_id, individual_portfolio_id, ticker, sm.wallet(ticker),
+                                                currency, value))
+
+    # удаление бумаги из портфеля
+    def del_stock(self, user_id, individual_portfolio_id, ticker, currency, value):
+        if int(Database.number_of_stocks_in_portfolio(self, user_id, individual_portfolio_id, ticker)) == int(value):
+            with self.connection:
+                return self.cursor.execute("DELETE FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                           "individual_portfolio_id = ? AND `ticker` = ?",
+                                           (user_id, individual_portfolio_id, ticker))
+        else:
+            stock_info = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                 "`individual_portfolio_id` = ? AND `ticker` = ?",
+                                                 (user_id, individual_portfolio_id, ticker)).fetchall()
+            edited_value = int(stock_info[0][5]) - int(value)
+            with self.connection:
+                return self.connection.execute("UPDATE `stocks_notes` SET `value` = ? WHERE "
+                                               "`user_id` = ? AND `individual_portfolio_id` = ? AND `ticker` = ?",
+                                               (edited_value, user_id, individual_portfolio_id, ticker))
+
+    # получение количества бумаг по тикеру в портфеле
+    def number_of_stocks_in_portfolio(self, user_id, individual_portfolio_id, ticker):
+        with self.connection:
+            return self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                           "`individual_portfolio_id` = ? AND `ticker` = ?",
+                                           (user_id, individual_portfolio_id, ticker)).fetchall()[0][5]
+
+    # получение количества денег по валюте в портфеле
+    def number_of_money_in_portfolio(self, user_id, individual_portfolio_id, wallet):
+        with self.connection:
+            return self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                           "`individual_portfolio_id` = ? AND `ticker` = ? AND `wallet` = ?",
+                                           (user_id, individual_portfolio_id, "money", wallet)).fetchall()[0][5]
+
+    # добавление денег в портель
+    def add_money(self, user_id, individual_portfolio_id, wallet, value):
+        if Database.wallet_exists_in_portfolio(self, user_id, individual_portfolio_id, "money", wallet):
+            with self.connection:
+                stock_info = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                     "`individual_portfolio_id` = ? AND `ticker` = ? AND `wallet` = ?",
+                                                     (user_id, individual_portfolio_id, "money", wallet)).fetchall()
+                edited_value = float(stock_info[0][4]) + float(value)
+                return self.connection.execute("UPDATE `stocks_notes` SET `currency` = ? WHERE `user_id` = ? AND "
+                                               "`individual_portfolio_id` = ? AND `ticker` = ? AND `wallet` = ?",
+                                               (edited_value, user_id, individual_portfolio_id, "money", wallet))
+        else:
+            with self.connection:
+                return self.connection.execute("INSERT INTO `stocks_notes` (user_id, individual_portfolio_id, ticker, "
+                                               "wallet, currency, value) VALUES(?,?,?,?,?,?)",
+                                               (user_id, individual_portfolio_id, "money", wallet, value, "0"))
+
+    # проверка, какие валюты есть в портфеле
+    def wallets_in_portfolio(self, user_id, individual_portfolio_id):
+        wallets = []
+        with self.connection:
+            notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                            "`individual_portfolio_id` = ?",
+                                            (user_id, individual_portfolio_id))
+            for selected_wallet in notes:
+                wallets.append(selected_wallet[3])
+            return list(set(wallets))
+
+    # проверка, деньги каких валют есть в портфеле
+    def money_wallets_in_portfolio(self, user_id, individual_portfolio_id):
+        wallets = []
+        with self.connection:
+            notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                            "`individual_portfolio_id` = ? AND `ticker` = ?",
+                                            (user_id, individual_portfolio_id, "money"))
+            for selected_wallet in notes:
+                wallets.append(selected_wallet[3])
+            return list(set(wallets))
+
+    # проверка, акции каких валют есть в портфеле
+    def stocks_wallets_in_portfolio(self, user_id, individual_portfolio_id):
+        wallets = []
+        with self.connection:
+            notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                            "`individual_portfolio_id` = ? AND NOT `ticker` = ?",
+                                            (user_id, individual_portfolio_id, "money"))
+            for selected_wallet in notes:
+                wallets.append(selected_wallet[3])
+            return list(set(wallets))
+
+    # удаление денег из портфеля
+    def del_money(self, user_id, individual_portfolio_id, wallet, value):
+        if float(Database.number_of_money_in_portfolio(self, user_id, individual_portfolio_id, wallet)) == float(
+                value):
+            with self.connection:
+                return self.cursor.execute("DELETE FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                           "individual_portfolio_id = ? AND `ticker` = ? AND `wallet` = ?",
+                                           (user_id, individual_portfolio_id, "money", wallet))
+        else:
+            stock_info = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                 "`individual_portfolio_id` = ? AND `ticker` = ? AND `wallet` = ?",
+                                                 (user_id, individual_portfolio_id, "money", wallet)).fetchall()
+            edited_value = float(stock_info[0][4]) - float(value)
+            with self.connection:
+                return self.connection.execute("UPDATE `stocks_notes` SET `currency` = ? WHERE "
+                                               "`user_id` = ? AND `individual_portfolio_id` = ? AND `wallet` = ?",
+                                               (edited_value, user_id, individual_portfolio_id, wallet))
+
+    # получение названия портфеля
+    def portfolio_name(self, user_id, individual_portfolio_id):
+        with self.connection:
+            return self.connection.execute("SELECT * FROM `portfolios` WHERE `user_id` = ? AND "
+                                           "`individual_portfolio_id` = ?", (user_id, individual_portfolio_id)).fetchall()[0][3]
+
+    # получение информации о бумагах из портфеля
+    def stocks_from_portfolio(self, user_id, individual_portfolio_id):
+        with self.connection:
+            return self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                           "`individual_portfolio_id` = ? AND NOT `ticker` = ?",
+                                           (user_id, individual_portfolio_id, "money")).fetchall()
+
+    # получение информации о валютах из портфеля
+    def money_from_portfolio(self, user_id, individual_portfolio_id):
+        with self.connection:
+            return self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                           "`individual_portfolio_id` = ? AND `ticker` = ?",
+                                           (user_id, individual_portfolio_id, "money")).fetchall()
+
+    # проверка, есть ли такая валюта у пользователя в этом портфеле
+    def wallet_exists_in_portfolio(self, user_id, individual_portfolio_id, ticker, wallet):
+        with self.connection:
+            return bool(len(self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                    "`individual_portfolio_id` = ? AND `ticker` = ? AND `wallet` = ?",
+                                                    (user_id, individual_portfolio_id, ticker, wallet)).fetchall()))
+
+    # получение сумма значений из портфеля по валюте
+    def sum_by_wallet(self, user_id, individual_portfolio_id, wallet):
+        sum = 0
+        with self.connection:
+            stocks_notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                   "`individual_portfolio_id` = ? AND `wallet` = ? AND NOT `ticker` = ?",
+                                                   (user_id, individual_portfolio_id, wallet, "money"))
+            money_notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                  "`individual_portfolio_id` = ? AND `wallet` = ? AND `ticker` = ?",
+                                                  (user_id, individual_portfolio_id, wallet, "money"))
+        for note in stocks_notes:
+            sum += (float(note[5]) * float(note[4]))
+        for note in money_notes:
+            sum += (float(note[4]))
+        return round(sum, 2)
+
+    # получение стоимости портфеля, опираясь на реальные значения ценных бумаг
+    def real_sum_by_wallet(self, user_id, individual_portfolio_id, wallet):
+        sum = 0
+        with self.connection:
+            stocks_notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                   "`individual_portfolio_id` = ? AND `wallet` = ? AND NOT `ticker` = ?",
+                                                   (user_id, individual_portfolio_id, wallet, "money"))
+            money_notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                  "`individual_portfolio_id` = ? AND `wallet` = ? AND `ticker` = ?",
+                                                  (user_id, individual_portfolio_id, wallet, "money"))
+        for note in stocks_notes:
+            sum += (float(note[5]) * float(sm.price(note[2])))
+        for note in money_notes:
+            sum += (float(note[4]))
+        return round(sum, 2)
 
     # закрытие соединения с БД
     def close(self):

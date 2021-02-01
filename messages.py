@@ -74,7 +74,7 @@ def alert_full_info(owner, individual_alert_id):
                   str(info[0][2]) + "\n<b>Значение: </b>" + \
                   str(info[0][3]) + " " + unit \
                   + "\n<b>Режим алерта: </b>" + mode + "\n<b>Тип алерта: </b>Бессрочный" + "\n<b>Сообщение: </b>" + \
-                  str(info[0][5]) + "\n\n--------------------\n<b>Добавление: </b>" + \
+                  str(info[0][5]) + "\n\n------------------------------------------------------\n<b>Добавление: </b>" + \
                   info[0][10] + edit_date
 
     else:
@@ -83,7 +83,7 @@ def alert_full_info(owner, individual_alert_id):
                   str(info[0][3]) + " " + unit \
                   + "\n<b>Режим алерта: </b>" + mode + "\n<b>Тип алерта: </b>Срочный\n" + "<b>Срок действия: </b>" + \
                   date.normalize_date(info[0][8]) + "\n<b>Сообщение: </b>" + str(info[0][5]) + \
-                  "\n\n--------------------\n<b>Добавлен: </b>" + \
+                  "\n\n------------------------------------------------------\n<b>Добавлен: </b>" + \
                   info[0][10] + edit_date
     if str(info[0][6]) == "0":
         message = message + "\n<b>Отключен/выполнен: </b>" + info[0][9]
@@ -129,7 +129,7 @@ def deactive_alerts(user_id):
                       date.normalize_date(info[n][8]) + "\n<b>Сообщение: </b>" + \
                       str(info[n][5]) + "\n\n/"
 
-    return message[0:-1] + "--------------------\nДля редактирования алерта нажмите на его номер"
+    return message[0:-1] + "------------------------------------------------------\nДля редактирования алерта нажмите на его номер"
 
 
 def active_alerts(user_id):
@@ -171,7 +171,7 @@ def active_alerts(user_id):
                       date.normalize_date(info[n][8]) + "\n<b>Сообщение: </b>" + \
                       str(info[n][5]) + "\n\n/"
 
-    return message[0:-1] + "--------------------\nДля редактирования алерта нажмите на его номер"
+    return message[0:-1] + "------------------------------------------------------\nДля редактирования алерта нажмите на его номер"
 
 
 def mode_message(ticker):
@@ -295,16 +295,47 @@ def my_portfolios(user_id):
         portfolios = db.user_portfolios(user_id)
         message = "<u><b>Мои инвестиционные портфели:</b></u>\n\n/"
         for selected_portfolio in portfolios:
-            if db.portolio_has_stocks(user_id, selected_portfolio[2]):
-                message += f"{selected_portfolio[2]}_portfolio\n<b>Название портфеля: </b>{selected_portfolio[3]}\n" \
-                           f"<b>Валюты: </b>{db.portfolio_wallets(user_id, selected_portfolio[2])}\n<b>Сумма: </b>\n\n/"
+            if db.portfolio_has_stocks(user_id, selected_portfolio[2]) or db.portfolio_has_money(user_id, selected_portfolio[2]):
+                wallets = db.wallets_in_portfolio(user_id, selected_portfolio[2])
+                message += f"{selected_portfolio[2]}_portfolio\n️<b>Название портфеля: </b>{selected_portfolio[3]}\n<b>Всего в портфеле: </b>\n"
+                for wallet in wallets:
+                    difference = round(float(db.real_sum_by_wallet(user_id, selected_portfolio[2], wallet) - \
+                                 db.sum_by_wallet(user_id, selected_portfolio[2], wallet)), 2)
+                    if difference == 0:
+                        message += "🟡"
+                    if difference < 0:
+                        message += "🔴"
+                    if difference > 0:
+                        difference = f"+{str(difference)}"
+                        message += "🟢"
+                    message += f"{db.real_sum_by_wallet(user_id, selected_portfolio[2], wallet)} ({difference}) {wallet}\n"
+                message += "\n/"
             else:
                 message += f"{selected_portfolio[2]}_portfolio\n<b>Название портфеля: </b>{selected_portfolio[3]}\n" \
-                           f"Портфель пуст\n\n/"
-        return message[:-1]
+                           f"Портфель пуст\n/"
+        return message[:-1] + "------------------------------------------------------\nДля получения подробной информации и редактирования портфеля " \
+               "нажмите на его номер"
     else:
         return "Инвестиционные портфели пока не добавлены"
 
 
 def portfolio_full_info(user_id, individual_portfolio_id):
-    return "."
+    money = db.money_from_portfolio(user_id, individual_portfolio_id)
+    stocks = db.stocks_from_portfolio(user_id, individual_portfolio_id)
+    message = f"<b>Название портфеля: </b>{db.portfolio_name(user_id, individual_portfolio_id)}\n\n"
+    if db.portfolio_has_money(user_id, individual_portfolio_id) or db.portfolio_has_stocks(user_id, individual_portfolio_id):
+        if db.portfolio_has_stocks(user_id, individual_portfolio_id):
+            message += "<u><b>Ценные бумаги:</b></u>\n\n"
+            for note in stocks:
+                message += f"<b>Тикер: </b>{note[2]}\n<b>Цена: </b>{note[4]} {note[3]}\n<b>Количество: </b>{note[5]}\n" \
+                           f"<u><b>Общая стоимость: </b></u> {float(note[4])*float(note[5])} {note[3]}\n\n"
+            message += "------------------------------------------------------\n"
+        if db.portfolio_has_money(user_id, individual_portfolio_id):
+            message += "<b>Валюты:</b>\n"
+            for note in money:
+                message += f"{note[4]} {note[3]}\n"
+
+            message += "------------------------------------------------------"
+    else:
+        message += "Портфель пуст"
+    return message
