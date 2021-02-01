@@ -130,6 +130,12 @@ class DelMoney(StatesGroup):
     value = State()
     accept = State()
 
+
+# состояние для изменения названия портфеля
+class EditPortfolioName(StatesGroup):
+    name = State()
+
+
 # ------------------------------------------ОБРАБОТЧИКИ КОМАНД----------------------------------------------
 
 
@@ -237,6 +243,9 @@ async def callback_inline(call):
         await bot.send_message(call.message.chat.id, "Выберите валюту:", reply_markup=kb.adaptive_wallet_keyboard(
                 db.money_wallets_in_portfolio(call.message.chat.id, active_id)))
         await DelMoney.wallet.set()
+    if call.data == "rename_portfolio":
+        await bot.send_message(call.message.chat.id, "Введите новое имя портфеля:")
+        await EditPortfolioName.name.set()
     if call.data == "delete_portfolio":
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text=messages.portfolio_full_info(call.message.chat.id, active_id) +
@@ -845,6 +854,16 @@ async def delete_portfolio(call, state: FSMContext):
                                     text=messages.portfolio_full_info(call.message.chat.id, active_id),
                                     reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
         await state.finish()
+
+
+# ввод нового имени портфеля
+@dp.message_handler(state=EditPortfolioName.name, content_types=types.ContentTypes.TEXT)
+async def edit_portfolio_name(message: types.Message, state: FSMContext):
+    db.rename_portfolio(message.text, message.from_user.id, active_id)
+    await state.finish()
+    await bot.edit_message_text(chat_id=message.from_user.id, message_id=message.message_id,
+                                text=messages.portfolio_full_info(message.from_user.id, active_id),
+                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
 
 
 # --------------------------------------------РЕДАКТИРОВАНИЕ АЛЕРТА---------------------------------------
