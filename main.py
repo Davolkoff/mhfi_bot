@@ -861,9 +861,9 @@ async def delete_portfolio(call, state: FSMContext):
 async def edit_portfolio_name(message: types.Message, state: FSMContext):
     db.rename_portfolio(message.text, message.from_user.id, active_id)
     await state.finish()
-    await bot.edit_message_text(chat_id=message.from_user.id, message_id=message.message_id,
-                                text=messages.portfolio_full_info(message.from_user.id, active_id),
-                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
+    await bot.send_message(chat_id=message.from_user.id,
+                           text=messages.portfolio_full_info(message.from_user.id, active_id),
+                           reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
 
 
 # --------------------------------------------РЕДАКТИРОВАНИЕ АЛЕРТА---------------------------------------
