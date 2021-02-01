@@ -74,7 +74,7 @@ def alert_full_info(owner, individual_alert_id):
                   str(info[0][2]) + "\n<b>Значение: </b>" + \
                   str(info[0][3]) + " " + unit \
                   + "\n<b>Режим алерта: </b>" + mode + "\n<b>Тип алерта: </b>Бессрочный" + "\n<b>Сообщение: </b>" + \
-                  str(info[0][5]) + "\n\n------------------------------------------------------\n<b>Добавление: </b>" + \
+                  str(info[0][5]) + "\n\n-----------------------------------------------\n<b>Добавление: </b>" + \
                   info[0][10] + edit_date
 
     else:
@@ -83,7 +83,7 @@ def alert_full_info(owner, individual_alert_id):
                   str(info[0][3]) + " " + unit \
                   + "\n<b>Режим алерта: </b>" + mode + "\n<b>Тип алерта: </b>Срочный\n" + "<b>Срок действия: </b>" + \
                   date.normalize_date(info[0][8]) + "\n<b>Сообщение: </b>" + str(info[0][5]) + \
-                  "\n\n------------------------------------------------------\n<b>Добавлен: </b>" + \
+                  "\n\n-----------------------------------------------\n<b>Добавлен: </b>" + \
                   info[0][10] + edit_date
     if str(info[0][6]) == "0":
         message = message + "\n<b>Отключен/выполнен: </b>" + info[0][9]
@@ -129,7 +129,7 @@ def deactive_alerts(user_id):
                       date.normalize_date(info[n][8]) + "\n<b>Сообщение: </b>" + \
                       str(info[n][5]) + "\n\n/"
 
-    return message[0:-1] + "------------------------------------------------------\nДля редактирования алерта нажмите на его номер"
+    return message[0:-1] + "-----------------------------------------------\nДля редактирования алерта нажмите на его номер"
 
 
 def active_alerts(user_id):
@@ -171,7 +171,7 @@ def active_alerts(user_id):
                       date.normalize_date(info[n][8]) + "\n<b>Сообщение: </b>" + \
                       str(info[n][5]) + "\n\n/"
 
-    return message[0:-1] + "------------------------------------------------------\nДля редактирования алерта нажмите на его номер"
+    return message[0:-1] + "-----------------------------------------------\nДля редактирования алерта нажмите на его номер"
 
 
 def mode_message(ticker):
@@ -280,7 +280,7 @@ def ticker_info(ticker):
 
     message += json.loads(yahoo_first_link)["quoteSummary"]["result"][0]["price"]["longName"]
 
-    message += f"\n------------------------------------------------------\n<b>Цена:</b> {price}\n" \
+    message += f"\n-----------------------------------------------\n<b>Цена:</b> {price}\n" \
                f"<b>Изменение цены за день:</b> {day_price_change} {wallet} ({day_price_change_percent}%)\n" \
                f"{sm.ytd_return(ticker)}{sm.dividend(ticker)}\n<b>Биржа:</b> {exchange}\n" \
                f"<b>Направление:</b> {industry}\n<b>Отрасль:</b> {sector}"
@@ -313,7 +313,7 @@ def my_portfolios(user_id):
             else:
                 message += f"{selected_portfolio[2]}_portfolio\n<b>Название портфеля: </b>{selected_portfolio[3]}\n" \
                            f"Портфель пуст\n/"
-        return message[:-1] + "------------------------------------------------------\nДля получения подробной информации и редактирования портфеля " \
+        return message[:-1] + "-----------------------------------------------\nДля получения подробной информации и редактирования портфеля " \
                "нажмите на его номер"
     else:
         return "Инвестиционные портфели пока не добавлены"
@@ -329,13 +329,13 @@ def portfolio_full_info(user_id, individual_portfolio_id):
             for note in stocks:
                 message += f"<b>Тикер: </b>{note[2]}\n<b>Цена: </b>{note[4]} {note[3]}\n<b>Количество: </b>{note[5]}\n" \
                            f"<u><b>Общая стоимость: </b></u> {float(note[4])*float(note[5])} {note[3]}\n\n"
-            message += "------------------------------------------------------\n"
+            message += "-----------------------------------------------\n"
         if db.portfolio_has_money(user_id, individual_portfolio_id):
             message += "<b>Валюты:</b>\n"
             for note in money:
                 message += f"{note[4]} {note[3]}\n"
 
-            message += "------------------------------------------------------"
+            message += "-----------------------------------------------"
     else:
         message += "Портфель пуст"
     return message

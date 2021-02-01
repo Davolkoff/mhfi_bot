@@ -112,11 +112,11 @@ add_dividend = InlineKeyboardButton('🟢💸Добавить дивиденд',
 del_dividend = InlineKeyboardButton('🔴💸Удалить дивиденд', callback_data='del_dividend')
 add_money = InlineKeyboardButton('🟢💰Внести деньги', callback_data='add_money')
 del_money = InlineKeyboardButton('🔴💰Забрать деньги', callback_data='del_money')
-delete_portfolio = InlineKeyboardButton('❌Удалить инвестиционный портфель', callback_data='delete_portfolio')
+rename_portfolio = InlineKeyboardButton('✏️Переименовать портфель', callback_data='rename_portfolio')
+delete_portfolio = InlineKeyboardButton('❌Удалить портфель', callback_data='delete_portfolio')
 back_to_my_portfolios = InlineKeyboardButton('⬅ Инвестиционные портфели', callback_data='my_portfolios')
-edit_portfolio_menu = InlineKeyboardMarkup().add(add_stock, del_stock).add(add_dividend, del_dividend).add(add_money,
-                                                                                                           del_money).\
-    add(delete_portfolio).add(back_to_my_portfolios).add(backToMainMenu)
+edit_portfolio_menu = InlineKeyboardMarkup().add(add_stock, del_stock).add(add_dividend, del_dividend).\
+    add(add_money, del_money).add(rename_portfolio).add(delete_portfolio).add(back_to_my_portfolios).add(backToMainMenu)
 
 
 # инициализация клавиатуры с выбором валют

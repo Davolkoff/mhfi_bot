@@ -451,6 +451,12 @@ class Database:
             sum += (float(note[4]))
         return round(sum, 2)
 
+    # переименование портфеля
+    def rename_portfolio(self, name, user_id, individual_portfolio_id):
+        with self.connection:
+            return self.connection.execute("UPDATE `portfolios` SET `portfolio_name` = ? WHERE `user_id` = ? AND "
+                                           "`individual_portfolio_id` = ?", (name, user_id, individual_portfolio_id))
+
     # закрытие соединения с БД
     def close(self):
         self.connection.close()
