@@ -4,6 +4,7 @@ import date
 import json
 import requests
 import tickers
+import datetime
 db = Database('users.db')
 
 main_menu = "ГЛАВНОЕ МЕНЮ"
@@ -30,6 +31,7 @@ description = """<b>Многофункциональный помощник дл
       🔸Диаграмма по валютам.
       🔸Диаграмма по количеству каждой бумаги в портфеле.
 <b>2️⃣ Оповещения на цену.</b>
+      🔸Отправка оповещений на электронную почту
       🔸Все акции рынка США.
       🔸Все️ акции Московской биржи.
       🔸Все акции Санкт-Петербургской биржи.
@@ -295,47 +297,62 @@ def my_portfolios(user_id):
         portfolios = db.user_portfolios(user_id)
         message = "<u><b>Мои инвестиционные портфели:</b></u>\n\n/"
         for selected_portfolio in portfolios:
-            if db.portfolio_has_stocks(user_id, selected_portfolio[2]) or db.portfolio_has_money(user_id, selected_portfolio[2]):
+            if db.portfolio_has_stocks(user_id, selected_portfolio[2]) or db.portfolio_has_money(user_id,
+                                                                                                 selected_portfolio[2]):
                 wallets = db.wallets_in_portfolio(user_id, selected_portfolio[2])
                 message += f"{selected_portfolio[2]}_portfolio\n️<b>Название портфеля: </b>{selected_portfolio[3]}\n<b>Всего в портфеле: </b>\n"
                 for wallet in wallets:
                     difference = round(float(db.real_sum_by_wallet(user_id, selected_portfolio[2], wallet) - \
                                  db.sum_by_wallet(user_id, selected_portfolio[2], wallet)), 2)
                     if difference == 0:
-                        message += "🟡"
+                        message += "🟡 "
                     if difference < 0:
-                        message += "🔴"
+                        message += "🔴 "
                     if difference > 0:
                         difference = f"+{str(difference)}"
-                        message += "🟢"
+                        message += "🟢 "
                     message += f"{db.real_sum_by_wallet(user_id, selected_portfolio[2], wallet)} ({difference}) {wallet}\n"
                 message += "\n/"
             else:
                 message += f"{selected_portfolio[2]}_portfolio\n<b>Название портфеля: </b>{selected_portfolio[3]}\n" \
                            f"Портфель пуст\n/"
-        return message[:-1] + "-----------------------------------------------\nДля получения подробной информации и редактирования портфеля " \
-               "нажмите на его номер"
+        return message[:-1] + "-----------------------------------------------\nДля получения подробной информации " \
+                              "и редактирования портфеля нажмите на его номер"
     else:
         return "Инвестиционные портфели пока не добавлены"
 
 
 def portfolio_full_info(user_id, individual_portfolio_id):
+    symbol = ""
     money = db.money_from_portfolio(user_id, individual_portfolio_id)
     stocks = db.stocks_from_portfolio(user_id, individual_portfolio_id)
-    message = f"<b>Название портфеля: </b>{db.portfolio_name(user_id, individual_portfolio_id)}\n\n"
-    if db.portfolio_has_money(user_id, individual_portfolio_id) or db.portfolio_has_stocks(user_id, individual_portfolio_id):
+    message = f"<b>💼 {db.portfolio_name(user_id, individual_portfolio_id)}</b>\n\n"
+    if db.portfolio_has_money(user_id, individual_portfolio_id) or db.portfolio_has_stocks(user_id,
+                                                                                           individual_portfolio_id):
         if db.portfolio_has_stocks(user_id, individual_portfolio_id):
             message += "<u><b>Ценные бумаги:</b></u>\n\n"
             for note in stocks:
-                message += f"<b>Тикер: </b>{note[2]}\n<b>Цена: </b>{note[4]} {note[3]}\n<b>Количество: </b>{note[5]}\n" \
-                           f"<u><b>Общая стоимость: </b></u> {float(note[4])*float(note[5])} {note[3]}\n\n"
+                price = sm.price(note[2])
+                difference = round(((float(note[5])*float(price))-(float(note[5])*float(note[4]))), 2)
+                if difference == 0:
+                    symbol = "🟡"
+                if difference < 0:
+                    symbol = "🔴"
+                if difference > 0:
+                    difference = f"+{str(difference)}"
+                    symbol = "🟢"
+
+                message += f"{symbol}<b>{sm.long_name(note[2])} ({note[2]})</b>\n<b>Цена покупки: </b>{note[4]} {note[3]}\n" \
+                           f"<b>Текущая цена: </b>{round(int(price),2)} {note[3]}\n<b>Количество: </b>{note[5]}" \
+                           f"<u><b>Общая стоимость: </b></u> " \
+                           f"{round((float(note[5])*float(price)),2)} ({difference}) {note[3]}\n\n"
             message += "-----------------------------------------------\n"
         if db.portfolio_has_money(user_id, individual_portfolio_id):
             message += "<b>Валюты:</b>\n"
             for note in money:
                 message += f"{note[4]} {note[3]}\n"
 
-            message += "-----------------------------------------------"
+            message += "-----------------------------------------------\n"
     else:
         message += "Портфель пуст"
     return message

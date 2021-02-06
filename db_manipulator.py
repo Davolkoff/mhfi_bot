@@ -1,7 +1,8 @@
 import sqlite3  # библиотека для работа с базами данных
 import sm_info as sm  # файл с функциями, связанными с биржей
 from date import normal_now  # функция получения текущего времени
-
+from collections import Counter  # подсчёт определенных элементов массива
+import numpy as np  # работает для объединения массивов
 
 class Database:
     # подключение к БД, инициализация класса
@@ -275,7 +276,7 @@ class Database:
                                                     (user_id, individual_portfolio_id, ticker)).fetchall()))
 
     # добавление бумаги в портфель
-    def add_stock(self, user_id, individual_portfolio_id, ticker, currency, value):
+    def add_stock(self, user_id, individual_portfolio_id, ticker, currency, value, sector):
         if Database.ticker_exists_in_portfolio(self, user_id, individual_portfolio_id, ticker):
             with self.connection:
                 stock_info = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
@@ -289,9 +290,9 @@ class Database:
         else:
             with self.connection:
                 return self.connection.execute("INSERT INTO `stocks_notes` (user_id, individual_portfolio_id, ticker, "
-                                               "wallet, currency, value) VALUES(?,?,?,?,?,?)",
+                                               "wallet, currency, value, sector) VALUES(?,?,?,?,?,?,?)",
                                                (user_id, individual_portfolio_id, ticker, sm.wallet(ticker),
-                                                currency, value))
+                                                currency, value, sector))
 
     # удаление бумаги из портфеля
     def del_stock(self, user_id, individual_portfolio_id, ticker, currency, value):
@@ -460,3 +461,19 @@ class Database:
     # закрытие соединения с БД
     def close(self):
         self.connection.close()
+
+    # получение массива отраслей из портфеля
+    def portfolio_sectors(self, user_id, individual_portfolio_id):
+        sectors = []
+        sectors_value = []
+        sectors_value_dict = {}
+        with self.connection:
+                selected_notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                         "`individual_portfolio_id` = ?",
+                                                         (user_id, individual_portfolio_id)).fetchall()
+                for note in selected_notes:
+                    sectors.append(note[6])
+                sectors_value_dict = Counter(sectors)
+                for sector in sectors:
+                    sectors_value.append(sectors_value_dict[sector])
+                return np.vstack((sectors, sectors_value))

@@ -3,7 +3,9 @@ import lxml.etree  # библиотека для парсинга xml файло
 import requests  # библиотека для работы с интернет-запросами
 import tickers  # файл с тикерами
 import finviz  # библиотека для связи с сервисом finviz
-
+import lxml.html as LH
+import re
+import datetime
 
 # получение цены бумаги с московской биржи
 def get_moex_price(ticker):
@@ -183,7 +185,8 @@ def day_price_change_percent(ticker):
     else:
         answer = requests.get(
             "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price").content
-        return float(str(json.loads(answer)["quoteSummary"]["result"][0]['price']['regularMarketChangePercent']['fmt']).replace("%",""))
+        return float(str(json.loads(answer)["quoteSummary"]["result"][0]['price']['regularMarketChangePercent']['fmt']).
+                     replace("%",""))
 
 
 # попытка сделать из числа float
@@ -197,6 +200,21 @@ def try_float(string):
     except:
         return False
 
+
+# получение отрасли по тикеру
+def sector_by_ticker(ticker):
+    if ticker in tickers.moex_tickers:
+        answer = requests.get(
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}.ME?modules=assetProfile").content
+        return json.loads(answer)["quoteSummary"]["result"][0]["assetProfile"]["sector"]
+    else:
+        answer = requests.get(
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=assetProfile").content
+        return json.loads(answer)["quoteSummary"]["result"][0]["assetProfile"]["sector"]
+
+
 # очистка кэша finviz
 def finviz_clear_cache():
     finviz.main_func.STOCK_PAGE.clear()
+
+

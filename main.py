@@ -190,11 +190,6 @@ async def callback_inline(call):
     global active_id
     # главное меню
     if call.data == "my_portfolios":
-        # media = [InputMediaPhoto(io.BufferedReader(plot.pie([10, 5, 9], ["fewf", "fqwef", "fqefq"], "wfew"))),
-        #         InputMediaPhoto(io.BufferedReader(plot.pie([30, 40, 50], ["fedsadf", "fqddd", "faaa"], "sdsakmk"))),
-        #         InputMediaPhoto(io.BufferedReader(plot.pie([3, 6, 1], ["осм назв", "авы", "ыфйъ"], "выфвыфw")))]
-        # await bot.send_media_group(call.message.chat.id, media)
-        # media.clear()
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text=messages.my_portfolios(call.message.chat.id), parse_mode='HTML',
                                     reply_markup=kb.my_portfolios_menu)
@@ -540,7 +535,8 @@ async def new_stock_value(message: types.Message, state: FSMContext):
 async def accept_new_stock(call, state: FSMContext):
     if call.data == "accept":
         stock_data = await state.get_data()
-        db.add_stock(call.message.chat.id, active_id, stock_data['ticker'], stock_data['currency'], stock_data['value'])
+        db.add_stock(call.message.chat.id, active_id, stock_data['ticker'], stock_data['currency'], stock_data['value'],
+                     sm.sector_by_ticker(stock_data['ticker']))
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text="Бумага куплена")
         await bot.send_message(call.message.chat.id, messages.portfolio_full_info(call.message.chat.id, active_id),
@@ -656,27 +652,33 @@ async def alert_get_mode(call, state: FSMContext):
         await state.update_data(mode=call.data)
         await AddAlert.next()
         alert = await state.get_data()
-        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=messages.mode_message(str(alert['ticker'])))
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text=messages.mode_message(str(alert['ticker'])))
     if call.data == "increased_vol":
         await state.update_data(mode=call.data)
         await AddAlert.next()
-        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Введите процент увеличения от нормы:")
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text="Введите процент увеличения от нормы:")
     if call.data == "day_increase":
         await state.update_data(mode=call.data)
         await AddAlert.next()
-        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Введите значение увеличения цены внутри дня:")
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text="Введите значение увеличения цены внутри дня:")
     if call.data == "day_decrease":
         await state.update_data(mode=call.data)
         await AddAlert.next()
-        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Введите значение уменьшения цены внутри дня:")
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text="Введите значение уменьшения цены внутри дня:")
     if call.data == "day_increase_percent":
         await state.update_data(mode=call.data)
         await AddAlert.next()
-        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Введите процент увеличения цены внутри дня:")
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text="Введите процент увеличения цены внутри дня:")
     if call.data == "day_decrease_percent":
         await state.update_data(mode=call.data)
         await AddAlert.next()
-        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Введите процент уменьшения цены внутри дня:")
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text="Введите процент уменьшения цены внутри дня:")
 
 
 # получение значения
@@ -799,7 +801,7 @@ async def accept_alert(call, state: FSMContext):
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text="Алерт добавлен", reply_markup=kb.standart_kb)
         await bot.send_message(call.message.chat.id, text=messages.alerts, parse_mode="HTML",
-                                    reply_markup=kb.univAlMenu)
+                               reply_markup=kb.univAlMenu)
         await state.finish()
     if call.data == "cancel":
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
@@ -831,10 +833,18 @@ async def alerts_editor(message: types.message):
                                reply_markup=kb.edit_executed_alert_menu, parse_mode='HTML')
         active_id = re.sub("\D", "", message.text)
     elif re.sub(r'[^\w\s]+|[\d]+', r'', message.text).strip() == "_portfolio":
+        active_id = re.sub("\D", "", message.text)
+        if db.portfolio_has_stocks(message.from_user.id, active_id):
+            sectors = db.portfolio_sectors(message.from_user.id, active_id)
+            media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+                     InputMediaPhoto(io.BufferedReader(plot.pie([30, 40, 50], ["fedsadf", "fqddd", "faaa"], "sdsakmk"))),
+                     InputMediaPhoto(io.BufferedReader(plot.pie([3, 6, 1], ["осм назв", "авы", "ыфйъ"], "выфвыфw")))]
+
+            await bot.send_media_group(message.from_user.id, media)
+            media.clear()
         await bot.send_message(message.from_user.id, messages.portfolio_full_info(message.from_user.id,
                                                                                   re.sub("\D", "", message.text)),
                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
-        active_id = re.sub("\D", "", message.text)
 
 
 # --------------------------------------------РЕДАКТИРОВАНИЕ ПОРТФЕЛЯ-------------------------------------
@@ -1106,8 +1116,8 @@ async def alert_check_mail(message: types.Message, state: FSMContext):
 async def alert_main(delay):
     while True:
         await asyncio.sleep(delay)
-        tickers = db.get_unique_tickers()
-        for selectedTicker in tickers:
+        tickers_list = db.get_unique_tickers()
+        for selectedTicker in tickers_list:
             local_price = sm.price(selectedTicker)
             ticker_notes = db.find_active_alerts_by_ticker(selectedTicker)
             for selectedNote in ticker_notes:
@@ -1140,8 +1150,8 @@ async def alert_main(delay):
 async def alert_vol(delay):
     while True:
         await asyncio.sleep(delay)
-        tickers = db.get_unique_tickers()
-        for selectedTicker in tickers:
+        tickers_list = db.get_unique_tickers()
+        for selectedTicker in tickers_list:
             ticker_notes = db.find_active_alerts_by_ticker(selectedTicker)
             for selectedNote in ticker_notes:
                 if selectedNote[4] == "increased_vol" and sm.finviz_volume_compare(selectedTicker) > \
@@ -1170,8 +1180,8 @@ async def off_overdue_alerts():
 async def increase_decrease_alerts(delay):
     while True:
         await asyncio.sleep(delay)
-        tickers = db.get_unique_tickers()
-        for selectedTicker in tickers:
+        tickers_list = db.get_unique_tickers()
+        for selectedTicker in tickers_list:
             ticker_notes = db.find_active_alerts_by_ticker(selectedTicker)
             for selectedNote in ticker_notes:
                 if selectedNote[4] == "day_increase" and sm.day_price_change(selectedTicker) >= selectedNote[3]:

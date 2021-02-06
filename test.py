@@ -1,7 +1,5 @@
 from db_manipulator import Database
 from settings import owner
+db = Database("users.db")
 
-import messages
-db = Database('users.db')
-
-print(messages.my_portfolios(owner))
+print(db.portfolio_sectors(owner, 1))
