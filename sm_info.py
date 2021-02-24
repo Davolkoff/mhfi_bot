@@ -3,9 +3,11 @@ import lxml.etree  # библиотека для парсинга xml файло
 import requests  # библиотека для работы с интернет-запросами
 import tickers  # файл с тикерами
 import finviz  # библиотека для связи с сервисом finviz
-import lxml.html as LH
-import re
-import datetime
+import lxml.html as LH  # модуль для парсинга xml страниц
+import re  # модуль для работы со строками
+import datetime  # модуль для получения времени
+from bs4 import BeautifulSoup  # Модуль для работы с HTML
+
 
 # получение цены бумаги с московской биржи
 def get_moex_price(ticker):
@@ -217,4 +219,39 @@ def sector_by_ticker(ticker):
 def finviz_clear_cache():
     finviz.main_func.STOCK_PAGE.clear()
 
+# получение курса валюты
+def currency_price(wallet):
+	
+	wallet_url = ''
+	# Заголовки для передачи вместе с URL
+	headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36'}
 
+	current_converted_price = 0
+	if wallet == "USD":
+		wallet_url = 'https://www.google.com/search?sxsrf=ALeKk01NWm6viYijAo3HXYOEQUyDEDtFEw%3A1584716087546&' \
+						'source=hp&ei=N9l0XtDXHs716QTcuaXoAg&q=%D0%B4%D0%BE%D0%BB%D0%BB%D0%B0%D1%80+%D0%BA+%D1%80%D1' \
+						'%83%D0%B1%D0%BB%D1%8E&oq=%D0%B4%D0%BE%D0%BB%D0%BB%D0%B0%D1%80+&gs_l=psy-ab.3.0.35i39i70i258' \
+						'j0i131l4j0j0i131l4.3044.4178..5294...1.0..0.83.544.7......0....1..gws-wiz.......35i39.5QL6' \
+						'Ev1Kfk4'
+	if wallet == "EUR":
+		wallet_url = 'https://www.google.com/search?sxsrf=ALeKk01ZFuaBqz-hrNipwKI9Ay3_kxuhsw%3A1612675635328&ei' \
+						'=M3ofYKi2E-zJrgS79YPICQ&q=евро+к+рублю&oq=tdhjк+рублю&gs_lcp=CgZwc3ktYWIQAxgAMgQIABANMgQIA' \
+						'BANMgQIABANMgQIABANMgQIABANMgQIABANMgQIABANMgQIABANMgQIABANMgQIABANOgcIABCwAxBDOgYIABAHEB46' \
+						'CAgAEAcQChAeOgQIABBDOgoIABAHEAoQHhAqUJKiB1iRtwdg0cIHaAJwAngAgAGTAYgB-AWSAQMyLjWYAQCgAQGqAQ' \
+						'dnd3Mtd2l6yAEKwAEB&sclient=psy-ab'
+	if wallet == "GBP":
+		wallet_url = 'https://www.google.com/search?sxsrf=ALeKk02MiLG7ZghcxBO6ecMbtgqod7jACQ%3A1612675759581&ei' \
+						'=r3ofYJiMI8rrrgT3-KCoCw&q=фунт+к+рублю&oq=aeynк+рублю&gs_lcp=CgZwc3ktYWIQAxgAMgQIABANMgQIA' \
+						'BANMgQIABANMgQIABANMgQIABANMgQIABANMgQIABANMgQIABANMgQIABANMgQIABANOgcIABCwAxBDOgYIABAHE' \
+						'B46CAgAEAcQChAeOgoIABAHEAoQHhAqULeFBljWiwZglpYGaAJwAngAgAFsiAGPBJIBAzAuNZgBAKABAaoBB2d3cy' \
+						'13aXrIAQrAAQE&sclient=psy-ab'
+	if wallet == "RUB":
+		return float(1)	
+	full_page = requests.get(wallet_url, headers=headers)
+
+	# Разбираем через BeautifulSoup
+	soup = BeautifulSoup(full_page.content, 'html.parser')
+
+	# Получаем нужное для нас значение и возвращаем его
+	convert = soup.findAll("span", {"class": "DFlfde", "class": "SwHCTb", "data-precision": 2})
+	return float(convert[0].text.replace(",", "."))

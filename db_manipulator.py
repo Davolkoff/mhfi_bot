@@ -462,18 +462,35 @@ class Database:
     def close(self):
         self.connection.close()
 
+    # обновление значений валют в базе данных
+    def refresh_wallets_currency(self):
+        for wallet in ["USD", "EUR", "GBP"]:
+            with self.connection:
+                self.connection.execute("UPDATE `wallets` SET `value` = ? WHERE `wallet` = ?", (sm.currency_price(wallet), wallet))
+
+    # получение цены валюты
+    def get_wallet_currency(self, wallet):
+        with self.connection:
+            return self.connection.execute("SELECT * FROM `wallets` WHERE `wallet` = ?", (wallet,)).fetchall()[0][1]
+
     # получение массива отраслей из портфеля
     def portfolio_sectors(self, user_id, individual_portfolio_id):
         sectors = []
         sectors_value = []
         sectors_value_dict = {}
+        sum_in_rub = 0
         with self.connection:
-                selected_notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
-                                                         "`individual_portfolio_id` = ?",
-                                                         (user_id, individual_portfolio_id)).fetchall()
+            selected_notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+                                                     "`individual_portfolio_id` = ?",
+                                                     (user_id, individual_portfolio_id)).fetchall()
+            for note in selected_notes:
+                sectors.append(note[6])
+            for sector in sectors:
                 for note in selected_notes:
-                    sectors.append(note[6])
-                sectors_value_dict = Counter(sectors)
-                for sector in sectors:
-                    sectors_value.append(sectors_value_dict[sector])
-                return np.vstack((sectors, sectors_value))
+                    if note[6] == sector:
+                        sum_in_rub += sm.currency_price(note[3]) * note[4] * note[5]
+                sectors_value_dict[sector] = round(sum_in_rub,2)
+                sum_in_rub = 0
+            for sector in sectors:
+                sectors_value.append(sectors_value_dict[sector])
+            return np.vstack((sectors, sectors_value))

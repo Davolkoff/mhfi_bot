@@ -1109,7 +1109,7 @@ async def alert_check_mail(message: types.Message, state: FSMContext):
     await state.finish()
 
 
-# ------------------------------------ФУНКЦИИ ДЛЯ СРАБАТЫВАНИЯ АЛЕРТОВ------------------------------------
+# --------------------------------------------ПОВТОРЯЮЩИЕСЯ ФУНКЦИИ------------------------------------
 
 
 # функция алертов, отвечающая за достижение цены
@@ -1220,6 +1220,12 @@ async def increase_decrease_alerts(delay):
                     db.alert_off(selectedNote[1], selectedNote[7])
 
 
+# функция обновления курса валют
+def refresh_wallets(delay):
+    while True:
+        await asyncio.sleep(delay)
+        db.refresh_wallets_currency()
+
 # ---------------------------------------------ЛОНГ ПОЛЛИНГ-----------------------------------------------
 
 # запуск лонг поллинга
@@ -1227,6 +1233,7 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(alert_main(15))
     loop.create_task(alert_vol(15))
+    loop.create_task(refresh_wallets(43200))
     loop.create_task(off_overdue_alerts())
     loop.create_task(increase_decrease_alerts(15))
     executor.start_polling(dp, skip_updates=True)
