@@ -1221,7 +1221,7 @@ async def increase_decrease_alerts(delay):
 
 
 # функция обновления курса валют
-def refresh_wallets(delay):
+async def refresh_wallets(delay):
     while True:
         await asyncio.sleep(delay)
         db.refresh_wallets_currency()
