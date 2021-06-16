@@ -283,7 +283,7 @@ def ticker_info(ticker):
     message += json.loads(yahoo_first_link)["quoteSummary"]["result"][0]["price"]["longName"]
 
     message += f"\n-----------------------------------------------\n<b>Цена:</b> {price}\n" \
-               f"<b>Изменение цены за день:</b> {day_price_change} {wallet} ({day_price_change_percent}%)\n" \
+               f"<b>Изменение цены за день:</b> {day_price_change} {wallet} ({day_price_change_percent})\n" \
                f"{sm.ytd_return(ticker)}{sm.dividend(ticker)}\n<b>Биржа:</b> {exchange}\n" \
                f"<b>Направление:</b> {industry}\n<b>Отрасль:</b> {sector}"
 
