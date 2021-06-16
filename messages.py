@@ -344,7 +344,7 @@ def portfolio_full_info(user_id, individual_portfolio_id):
 
                 message += f"{symbol}<b>{sm.long_name(note[2])} ({note[2]})</b>\n<b>Цена покупки: </b>{note[4]} {note[3]}\n" \
                            f"<b>Текущая цена: </b>{round(int(price),2)} {note[3]}\n<b>Количество: </b>{note[5]}" \
-                           f"<u><b>Общая стоимость: </b></u> " \
+                           f"\n<u><b>Общая стоимость: </b></u> " \
                            f"{round((float(note[5])*float(price)),2)} ({difference}) {note[3]}\n\n"
             message += "-----------------------------------------------\n"
         if db.portfolio_has_money(user_id, individual_portfolio_id):

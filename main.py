@@ -842,9 +842,13 @@ async def alerts_editor(message: types.message):
 
             await bot.send_media_group(message.from_user.id, media)
             media.clear()
-        await bot.send_message(message.from_user.id, messages.portfolio_full_info(message.from_user.id,
-                                                                                  re.sub("\D", "", message.text)),
-                               reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
+            await bot.send_message(message.from_user.id, messages.portfolio_full_info(message.from_user.id,
+                                                                                      re.sub("\D", "", message.text)),
+                                   reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
+        else:
+            await bot.send_message(message.from_user.id, messages.portfolio_full_info(message.from_user.id,
+                                                                                      re.sub("\D", "", message.text)),
+                                   reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
 
 
 # --------------------------------------------РЕДАКТИРОВАНИЕ ПОРТФЕЛЯ-------------------------------------
