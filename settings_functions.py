@@ -6,6 +6,10 @@ import messages
 from aiogram import types
 import mail
 import random
+from db_manipulator import Database
+from main import bot, dp
+
+db = Database("users.db")
 
 code = ""  # сюда сохраняется код для подтверждения электронной почты
 i = 0  # это счётчик неудачных попыток ввода кода, присланного на почту

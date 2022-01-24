@@ -140,6 +140,38 @@ class Database:
         with self.connection:
             return self.cursor.execute("SELECT * FROM `mail` WHERE user_id = ?", (user_id,)).fetchall()[0][1]
 
+    # поиск токена пользователя
+    def user_token(self, user_id):
+        with self.connection:
+            return self.cursor.execute("SELECT * FROM `tokens` WHERE `user_id` = ?", (user_id,)).fetchall()
+
+    # добавление нового токена в базу данных
+    def new_token(self, user_id, token):
+        with self.connection:
+            return self.cursor.execute("INSERT INTO `tokens` (`user_id`, `token`) VALUES(?,?)", (user_id,token,))
+
+    # изменение существующего токена
+    def update_token(self, user_id, token):
+        with self.connection:
+            return self.cursor.execute("UPDATE `tokens` SET `token` = ? WHERE `user_id` = ?", (token, user_id))
+
+    # проверка, есть ли токен в базе
+    def token_exists(self, token):
+        return bool(self.cursor.execute("SELECT * FROM `tokens` WHERE `token` = ?", (token,)).fetchall())
+    
+    # поиск пользователя с нужным токеном
+    def token_owner(self, token):
+        return self.cursor.execute("SELECT * FROM `tokens` WHERE `token` = ?", (token,)).fetchall()[0][0]
+
+    # перенос данных
+    def data_transfer(self, old, new):
+        self.cursor.execute("UPDATE `alerts` SET `user_id` = ? WHERE `user_id` = ?", (new, old))
+        self.cursor.execute("UPDATE `mail` SET `user_id` = ? WHERE `user_id` = ?", (new, old))
+        self.cursor.execute("UPDATE `portfolios` SET `user_id` = ? WHERE `user_id` = ?", (new, old))
+        self.cursor.execute("UPDATE `settings` SET `user_id` = ? WHERE `user_id` = ?", (new, old))
+        self.cursor.execute("UPDATE `stocks_notes` SET `user_id` = ? WHERE `user_id` = ?", (new, old))
+        self.cursor.execute("UPDATE `tokens` SET `user_id` = ? WHERE `user_id` = ?", (new, old))
+
     # проверка, есть ли юзер в настройках
     def user_exists(self, user_id):
         with self.connection:
@@ -326,7 +358,7 @@ class Database:
                                            (user_id, individual_portfolio_id, "money", wallet)).fetchall()[0][5]
 
     # добавление денег в портель
-    def add_money(self, user_id, individual_portfolio_id, wallet, value):
+    def add_money(self, user_id, individual_portfolio_id, wallet, currency, value):
         if Database.wallet_exists_in_portfolio(self, user_id, individual_portfolio_id, "money", wallet):
             with self.connection:
                 stock_info = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
@@ -339,8 +371,8 @@ class Database:
         else:
             with self.connection:
                 return self.connection.execute("INSERT INTO `stocks_notes` (user_id, individual_portfolio_id, ticker, "
-                                               "wallet, currency, value) VALUES(?,?,?,?,?,?)",
-                                               (user_id, individual_portfolio_id, "money", wallet, value, "0"))
+                                               "wallet, currency, value, sector) VALUES(?,?,?,?,?,?,?)",
+                                               (user_id, individual_portfolio_id, "money", wallet, currency, value, "Wallets"))
 
     # проверка, какие валюты есть в портфеле
     def wallets_in_portfolio(self, user_id, individual_portfolio_id):
@@ -387,9 +419,9 @@ class Database:
             stock_info = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
                                                  "`individual_portfolio_id` = ? AND `ticker` = ? AND `wallet` = ?",
                                                  (user_id, individual_portfolio_id, "money", wallet)).fetchall()
-            edited_value = float(stock_info[0][4]) - float(value)
+            edited_value = float(stock_info[0][5]) - float(value)
             with self.connection:
-                return self.connection.execute("UPDATE `stocks_notes` SET `currency` = ? WHERE "
+                return self.connection.execute("UPDATE `stocks_notes` SET `value` = ? WHERE "
                                                "`user_id` = ? AND `individual_portfolio_id` = ? AND `wallet` = ?",
                                                (edited_value, user_id, individual_portfolio_id, wallet))
 
@@ -477,20 +509,43 @@ class Database:
     def portfolio_sectors(self, user_id, individual_portfolio_id):
         sectors = []
         sectors_value = []
-        sectors_value_dict = {}
+        
         sum_in_rub = 0
         with self.connection:
-            selected_notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND "
+            notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND " \
                                                      "`individual_portfolio_id` = ?",
                                                      (user_id, individual_portfolio_id)).fetchall()
-            for note in selected_notes:
-                sectors.append(note[6])
-            for sector in sectors:
-                for note in selected_notes:
-                    if note[6] == sector:
-                        sum_in_rub += sm.currency_price(note[3]) * note[4] * note[5]
-                sectors_value_dict[sector] = round(sum_in_rub,2)
+            for selected_note in notes:
+                if selected_note[6] not in sectors:
+                    sectors.append(selected_note[6])
+            
+            for selected_sector in sectors:
+                for selected_note in notes:
+                    if selected_note[6] == selected_sector:
+                        sum_in_rub += float(float(sm.price(selected_note[2])) * selected_note[5] * sm.currency_price(selected_note[3]))
+                    
+                sectors_value.append(sum_in_rub)
                 sum_in_rub = 0
-            for sector in sectors:
-                sectors_value.append(sectors_value_dict[sector])
             return np.vstack((sectors, sectors_value))
+
+    # получение массива валют из портфеля
+    def portfolio_wallets(self, user_id, individual_portfolio_id):
+        wallets = []
+        wallets_value = []
+        sum_in_rub = 0
+        with self.connection:
+            notes = self.connection.execute("SELECT * FROM `stocks_notes` WHERE `user_id` = ? AND " \
+                                            "`individual_portfolio_id` = ?", 
+                                                      (user_id, individual_portfolio_id)).fetchall()
+            for selected_note in notes:
+                if selected_note[3] not in wallets:
+                    wallets.append(selected_note[3])
+            
+            for selected_wallet in wallets:
+                for selected_note in notes:
+                    if selected_note[3] == selected_wallet:
+                        sum_in_rub += float(selected_note[4] * selected_note[5] * float(sm.currency_price(selected_note[3])))
+                    
+                wallets_value.append(sum_in_rub)
+                sum_in_rub = 0
+            return np.vstack((wallets, wallets_value))

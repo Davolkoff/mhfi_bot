@@ -1,7 +1,5 @@
-from db_manipulator import Database
-from settings import owner
-import sm_info as sm
+import db_manipulator
 
-db = Database("users.db")
+db = db_manipulator.Database('users.db')
 
-print(db.portfolio_sectors(owner, 1))
+print(db.token_owner("O78EXjYFvU1M3CBAuSqwdaJKcRkZNILP"))

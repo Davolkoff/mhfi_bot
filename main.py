@@ -1,6 +1,6 @@
 # ---------------------------------------ПОДКЛЮЧЕННЫЕ БИБЛИОТЕКИ------------------------------------------
 
-import io  # библиотека для работы с оперативной памятью
+import io # библиотека для работы с оперативной памятью
 import logging  # библиотека для логов
 import re  # библиотека для работы со строками
 import asyncio  # библиотека для постоянно повторяющегося прохода по алертам
@@ -13,7 +13,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup  # машина 
 from aiogram.contrib.fsm_storage.memory import MemoryStorage  # управление памятью
 from aiogram.dispatcher import FSMContext  # машина состояний
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-import requests.packages.urllib3  # её я использовал для того, чтобы "небезопасные" запросы в finviz работали
+import requests  # её я использовал для того, чтобы "небезопасные" запросы в finviz работали
 
 # -----------------------------------------ПОДКЛЮЧЕННЫЕ ФАЙЛЫ---------------------------------------------
 
@@ -27,6 +27,7 @@ from db_manipulator import Database  # файл, отвечающий за ра�
 import mail  # файл с функциями, отвечающими за почту
 import date  # модифицированная версия datetime
 import tickers  # файл с тикерами
+import tokens # файл с функциями для токенов
 
 # -------------------------------------------ИНИЦИАЛИЗАЦИЯ------------------------------------------------
 
@@ -50,7 +51,7 @@ dp = Dispatcher(bot, storage=storage)
 code = ""  # сюда сохраняется код для подтверждения электронной почты
 i = 0  # это счётчик неудачных попыток ввода кода, присланного на почту
 active_id = 0  # это id активного алерта для изменения
-
+new_user_id = 0 # id пользователя, отправившего запрос на перенос данных
 
 # --------------------------------------ПОДКЛЮЧЕНИЕ МАШИНЫ СОСТОЯНИЙ--------------------------------------
 
@@ -135,6 +136,10 @@ class DelMoney(StatesGroup):
 class EditPortfolioName(StatesGroup):
     name = State()
 
+# состояние для ввода токена
+class EnterToken(StatesGroup):
+    token = State()
+
 
 # ------------------------------------------ОБРАБОТЧИКИ КОМАНД----------------------------------------------
 
@@ -188,6 +193,7 @@ async def receive_ticker_info(message: types.Message, state: FSMContext):
 @dp.callback_query_handler(lambda call: True)
 async def callback_inline(call):
     global active_id
+    global new_user_id
     # главное меню
     if call.data == "my_portfolios":
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
@@ -199,10 +205,10 @@ async def callback_inline(call):
                                     text="Введите тикер для получения информации о бумаге:\n\n*Если тикер принадлежит "
                                          "европейской бирже, введите её название через точку (Например, ADS.DE)")
     if call.data == "alerts":
-        kb.active_alerts = InlineKeyboardButton('Активные алерты [' +
+        kb.active_alerts = InlineKeyboardButton('🟢Активные алерты [' +
                                                 str(len(db.active_alerts_list(call.message.chat.id))) +
                                                 ']', callback_data='active_alerts')
-        kb.executed_alerts = InlineKeyboardButton('Выполненные алерты [' +
+        kb.executed_alerts = InlineKeyboardButton('🟡Выполненные алерты [' +
                                                   str(len(db.executed_alerts_list(call.message.chat.id))) +
                                                   ']', callback_data='executed_alerts')
         kb.alMenu = InlineKeyboardMarkup(row_width=1).add(kb.active_alerts, kb.executed_alerts, kb.add_alert,
@@ -210,6 +216,8 @@ async def callback_inline(call):
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text=messages.alerts, parse_mode='HTML',
                                     reply_markup=kb.alMenu)
+    if call.data == "about_us":
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=messages.about_us, parse_mode='HTML', reply_markup=kb.about_us_menu)
     if call.data == "feedback":
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text=messages.feedback, reply_markup=kb.feedback_menu)
@@ -219,7 +227,7 @@ async def callback_inline(call):
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text=messages.settings_menu(call.message.chat.id),
                                     reply_markup=kb.settings_menu, parse_mode="HTML")
-
+    
     # меню инвестиционных портфелей
     if call.data == "add_portfolio":
         await bot.send_message(call.message.chat.id, "Введите название портфеля: ")
@@ -287,10 +295,10 @@ async def callback_inline(call):
         await EditAlert.delete_alert.set()
     if call.data == "off_alert":
         db.alert_off(call.message.chat.id, active_id)
-        kb.active_alerts = InlineKeyboardButton('Активные алерты [' +
+        kb.active_alerts = InlineKeyboardButton('🟢Активные алерты [' +
                                                 str(len(db.active_alerts_list(call.message.chat.id))) +
                                                 ']', callback_data='active_alerts')
-        kb.executed_alerts = InlineKeyboardButton('Выполненные алерты [' +
+        kb.executed_alerts = InlineKeyboardButton('🟡Выполненные алерты [' +
                                                   str(len(db.executed_alerts_list(call.message.chat.id))) + ']',
                                                   callback_data='executed_alerts')
         kb.alMenu = InlineKeyboardMarkup(row_width=1).add(kb.active_alerts, kb.executed_alerts
@@ -337,8 +345,63 @@ async def callback_inline(call):
                                         text=messages.settings_menu(call.message.chat.id),
                                         reply_markup=kb.settings_menu, parse_mode="HTML")
 
+    # кнопка для входа в меню переноса данных
+    if call.data == "data_transfer":
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text=messages.data_transfer_menu(call.message.chat.id),
+                                    reply_markup=kb.data_transfer_menu, parse_mode="HTML")
+    
+    # кнопка для возврата в настроек
+    if call.data == "backToSettingsMenu":
+        await change_settings_keyboard(call.message.chat.id)
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text=messages.settings_menu(call.message.chat.id),
+                                    reply_markup=kb.settings_menu, parse_mode="HTML")
 
-# ----------------------------------------ДОБАВЛЕНИЕ НОВОГО ПОРТФЕЛЯ--------------------------------------
+    # создание токена
+    if call.data == "create_data_transfer_token":
+        token = tokens.generate_token(32)
+        if bool(db.user_token(call.message.chat.id)):
+            db.update_token(call.message.chat.id, token)
+        else:
+            db.new_token(call.message.chat.id, token)
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text=messages.data_transfer_menu(call.message.chat.id),
+                                    reply_markup=kb.data_transfer_menu, parse_mode="HTML")
+        await bot.send_message(call.message.chat.id, str(token), reply_markup=kb.standart_kb)
+
+    # ввод токена
+    if call.data == "enter_data_transfer_token":
+        await EnterToken.token.set()
+        await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                    text="Введите ваш уникальный ключ:")
+    
+    if call.data == "transfer_accept":
+        db.data_transfer(call.message.chat.id, new_user_id)
+        await bot.send_message(call.message.chat.id, "✅Данные перенесены", reply_markup=kb.standart_kb)
+        await bot.send_message(new_user_id, "✅Данные перенесены", reply_markup=kb.standart_kb)
+    if call.data == "transfer_cancel":
+        await bot.send_message(call.message.chat.id, "🚫Запрос отклонен", reply_markup=kb.standart_kb)
+        await bot.send_message(new_user_id, "🚫Запрос отклонен", reply_markup=kb.standart_kb)
+
+# ------------------------------------------ПЕРЕНОС ДАННЫХ-----------------------------------------------
+@dp.message_handler(state=EnterToken.token, content_types=types.ContentTypes.TEXT)
+async def data_transfer(message: types.Message, state: FSMContext):
+    global new_user_id
+    new_user_id = message.from_user.id
+    if db.token_exists(message.text):
+        await bot.send_message(chat_id=db.token_owner(message.text), text=messages.data_transfer_acception,
+                               parse_mode='HTML', reply_markup=kb.transfer_acception_keyboard)
+        await bot.send_message(message.from_user.id, "⌛️Ожидается подтверждение переноса на старом аккаунте")
+        await state.finish()
+    else:
+        await bot.send_message(message.from_user.id, "😧Кажется, токен отсутствует в базе. Проверьте правильность ввода", reply_markup=kb.standart_kb)
+        await state.finish()
+
+
+
+        
+# -------------------------------------ДОБАВЛЕНИЕ НОВОГО ПОРТФЕЛЯ----------------------------------------
 
 
 # получение названия портфеля
@@ -402,9 +465,18 @@ async def new_stock_ticker(message: types.Message, state: FSMContext):
 async def accept_new_stock(call, state: FSMContext):
     if call.data == "accept":
         money_data = await state.get_data()
-        db.add_money(call.message.chat.id, active_id, money_data['wallet'], money_data['value'])
+        if money_data['wallet'] == "RUB":
+            currency_now = 1
+        else:
+            currency_now = db.get_wallet_currency(money_data['wallet'])
+        db.add_money(call.message.chat.id, active_id, money_data['wallet'], currency_now, money_data['value'])
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text="Валюта внесена")
+        sectors = db.portfolio_sectors(call.message.chat.id, active_id)
+        wallets = db.portfolio_wallets(call.message.chat.id, active_id)
+        media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+                InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
+
         await bot.send_message(call.message.chat.id, messages.portfolio_full_info(call.message.chat.id, active_id),
                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
 
@@ -412,6 +484,13 @@ async def accept_new_stock(call, state: FSMContext):
     if call.data == "cancel":
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text="Внесение валюты отменено")
+        sectors = db.portfolio_sectors(call.message.chat.id, active_id)
+        wallets = db.portfolio_wallets(call.message.chat.id, active_id)
+        media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+                InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
+
+        await bot.send_media_group(call.message.chat.id, media)
+        media.clear()
         await bot.send_message(call.message.chat.id, messages.portfolio_full_info(call.message.chat.id, active_id),
                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
         await state.finish()
@@ -464,7 +543,7 @@ async def new_stock_ticker(message: types.Message, state: FSMContext):
     await DelMoney.next()
 
 
-# отмена или добавление денег в БД
+# отмена или вывод денег из БД
 @dp.callback_query_handler(lambda call: True, state=DelMoney.accept)
 async def accept_new_stock(call, state: FSMContext):
     if call.data == "accept":
@@ -472,6 +551,13 @@ async def accept_new_stock(call, state: FSMContext):
         db.del_money(call.message.chat.id, active_id, money_data['wallet'], money_data['value'])
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text="Деньги выведены")
+        sectors = db.portfolio_sectors(call.message.chat.id, active_id)
+        wallets = db.portfolio_wallets(call.message.chat.id, active_id)
+        media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+                InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
+
+        await bot.send_media_group(call.message.chat.id, media)
+        media.clear()
         await bot.send_message(call.message.chat.id, messages.portfolio_full_info(call.message.chat.id, active_id),
                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
 
@@ -479,6 +565,13 @@ async def accept_new_stock(call, state: FSMContext):
     if call.data == "cancel":
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text="Выведение денег отменено")
+        sectors = db.portfolio_sectors(call.message.chat.id, active_id)
+        wallets = db.portfolio_wallets(call.message.chat.id, active_id)
+        media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+                InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
+
+        await bot.send_media_group(call.message.chat.id, media)
+        media.clear()
         await bot.send_message(call.message.chat.id, messages.portfolio_full_info(call.message.chat.id, active_id),
                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
         await state.finish()
@@ -508,7 +601,7 @@ async def new_stock_quantity(message: types.Message, state: FSMContext):
     if not message.text.isdigit() or (message.text.isdigit() and (int(message.text) < 0)):
         await bot.send_message(message.from_user.id, "Введите корректное значение")
         return
-    await state.update_data(value=message.text)
+    await state.update_data(value=str.upper(message.text))
     data = await state.get_data()
     await AddStock.next()
     await bot.send_message(message.from_user.id, f"Введите цену за одну бумагу ({sm.wallet(data['ticker'])}): ")
@@ -539,6 +632,13 @@ async def accept_new_stock(call, state: FSMContext):
                      sm.sector_by_ticker(stock_data['ticker']))
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text="Бумага куплена")
+        sectors = db.portfolio_sectors(call.message.chat.id, active_id)
+        wallets = db.portfolio_wallets(call.message.chat.id, active_id)
+        media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+                InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
+
+        await bot.send_media_group(call.message.chat.id, media)
+        media.clear()
         await bot.send_message(call.message.chat.id, messages.portfolio_full_info(call.message.chat.id, active_id),
                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
 
@@ -546,6 +646,13 @@ async def accept_new_stock(call, state: FSMContext):
     if call.data == "cancel":
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text="Покупка бумаги отменена")
+        sectors = db.portfolio_sectors(call.message.chat.id, active_id)
+        wallets = db.portfolio_wallets(call.message.chat.id, active_id)
+        media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+                InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
+
+        await bot.send_media_group(call.message.chat.id, media)
+        media.clear()
         await bot.send_message(call.message.chat.id, messages.portfolio_full_info(call.message.chat.id, active_id),
                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
         await state.finish()
@@ -608,6 +715,13 @@ async def accept_new_stock(call, state: FSMContext):
         db.del_stock(call.message.chat.id, active_id, stock_data['ticker'], stock_data['currency'], stock_data['value'])
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text="Бумага продана")
+        sectors = db.portfolio_sectors(call.message.chat.id, active_id)
+        wallets = db.portfolio_wallets(call.message.chat.id, active_id)
+        media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+                InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
+
+        await bot.send_media_group(call.message.chat.id, media)
+        media.clear()
         await bot.send_message(call.message.chat.id, messages.portfolio_full_info(call.message.chat.id, active_id),
                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
 
@@ -615,6 +729,13 @@ async def accept_new_stock(call, state: FSMContext):
     if call.data == "cancel":
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text="Продажа бумаги отменена")
+        sectors = db.portfolio_sectors(call.message.chat.id, active_id)
+        wallets = db.portfolio_wallets(call.message.chat.id, active_id)
+        media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+                InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
+
+        await bot.send_media_group(call.message.chat.id, media)
+        media.clear()
         await bot.send_message(call.message.chat.id, messages.portfolio_full_info(call.message.chat.id, active_id),
                                reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
         await state.finish()
@@ -740,10 +861,10 @@ async def inline_kb_answer_callback_handler(call, state: FSMContext):
             mode = "Внутридневное движение цены вниз (%)"
             unit = "%"
         await bot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id,
-                                    text="<b>Добавление алерта: </b>\n\n<b>Тикер: </b>" + alert_data['ticker'] +
-                                         "\n<b>Режим: </b>" + mode + "\n<b>Значение: </b>" + alert_data['value'] + " " +
-                                         unit + "\n<b>Сообщение: </b>" +
-                                         alert_data['message'] + "\n<b>Тип алерта: </b>срочный\n<b>"
+                                    text="<b>Добавление алерта: </b>\n\n🏷<b>Тикер: </b>" + alert_data['ticker'] +
+                                         "\n📇<b>Режим: </b>" + mode + "\n🎚<b>Значение: </b>" + alert_data['value'] + " " +
+                                         unit + "\n✉️<b>Сообщение: </b>" +
+                                         alert_data['message'] + "\n⏰<b>Тип алерта: </b>срочный\n⏱<b>"
                                                                  "Дата окончания действия алерта: </b>" +
                                          str(result.day) + "." + str(result.month) + "." + str(result.year),
                                     parse_mode="HTML", reply_markup=kb.alert_accept_menu)
@@ -782,11 +903,11 @@ async def alert_get_date(call, state: FSMContext):
             mode = "Внутридневное движение цены вниз (%)"
             unit = "%"
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                    text="<u><b>Добавление алерта:</b></u>"
-                                         "\n\n<b>Тикер: </b>" +
-                                         alert_data['ticker'] + "\n<b>Режим: </b>" + mode + "\n<b>Значение: </b>" +
-                                         alert_data['value'] + " " + unit + "\n<b>Сообщение:</b> "
-                                         + alert_data['message'] + "\n<b>Тип алерта:</b> бессрочный", parse_mode="HTML",
+                                    text="<u>🏷<b>Добавление алерта:</b></u>"
+                                         "\n\n🎚<b>Тикер: </b>" +
+                                         alert_data['ticker'] + "\n📇<b>Режим: </b>" + mode + "\n🎚<b>Значение: </b>" +
+                                         alert_data['value'] + " " + unit + "\n✉️<b>Сообщение:</b> "
+                                         + alert_data['message'] + "\n⏰<b>Тип алерта:</b> бессрочный", parse_mode="HTML",
                                     reply_markup=kb.alert_accept_menu)
         await AddAlert.next()
 
@@ -818,7 +939,7 @@ async def accept_alert(call, state: FSMContext):
 # ------------------------------------КОМАНДЫ, ОТВЕЧАЮЩИЕ ЗА РЕДАКТИРОВАНИЕ-------------------------------
 
 
-# команды, отвечающие за редактирование алертов
+# команды, отвечающие за редактирование алертов и портфелей
 @dp.message_handler(content_types=types.ContentTypes.TEXT)
 async def alerts_editor(message: types.message):
     global active_id
@@ -836,9 +957,9 @@ async def alerts_editor(message: types.message):
         active_id = re.sub("\D", "", message.text)
         if db.portfolio_has_stocks(message.from_user.id, active_id):
             sectors = db.portfolio_sectors(message.from_user.id, active_id)
+            wallets = db.portfolio_wallets(message.from_user.id, active_id)
             media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
-                     InputMediaPhoto(io.BufferedReader(plot.pie([30, 40, 50], ["fedsadf", "fqddd", "faaa"], "sdsakmk"))),
-                     InputMediaPhoto(io.BufferedReader(plot.pie([3, 6, 1], ["осм назв", "авы", "ыфйъ"], "выфвыфw")))]
+                     InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
 
             await bot.send_media_group(message.from_user.id, media)
             media.clear()
@@ -864,6 +985,13 @@ async def delete_portfolio(call, state: FSMContext):
                                     reply_markup=kb.my_portfolios_menu)
         await state.finish()
     if call.data == "cancel":
+        sectors = db.portfolio_sectors(call.message.chat.id, active_id)
+        wallets = db.portfolio_wallets(call.message.chat.id, active_id)
+        media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+                InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
+
+        await bot.send_media_group(call.message.chat.id, media)
+        media.clear()
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                     text=messages.portfolio_full_info(call.message.chat.id, active_id),
                                     reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
@@ -875,6 +1003,13 @@ async def delete_portfolio(call, state: FSMContext):
 async def edit_portfolio_name(message: types.Message, state: FSMContext):
     db.rename_portfolio(message.text, message.from_user.id, active_id)
     await state.finish()
+    sectors = db.portfolio_sectors(message.from_user.id, active_id)
+    wallets = db.portfolio_wallets(message.from_user.id, active_id)
+    media = [InputMediaPhoto(io.BufferedReader(plot.pie(sectors[1], sectors[0], "Отрасли"))),
+            InputMediaPhoto(io.BufferedReader(plot.pie(wallets[1], wallets[0], "Валюты")))]
+
+    await bot.send_media_group(message.from_user.id, media)
+    media.clear()
     await bot.send_message(chat_id=message.from_user.id,
                            text=messages.portfolio_full_info(message.from_user.id, active_id),
                            reply_markup=kb.edit_portfolio_menu, parse_mode='HTML')
@@ -1020,10 +1155,10 @@ async def alert_edit_date(call, state: FSMContext):
 async def delete_alert(call, state: FSMContext):
     if call.data == "accept":
         db.delete_alert(call.message.chat.id, active_id)
-        kb.active_alerts = InlineKeyboardButton('Активные алерты [' +
+        kb.active_alerts = InlineKeyboardButton('🟢Активные алерты [' +
                                                 str(len(db.active_alerts_list(call.message.chat.id))) +
                                                 ']', callback_data='active_alerts')
-        kb.executed_alerts = InlineKeyboardButton('Выполненные алерты [' +
+        kb.executed_alerts = InlineKeyboardButton('🟡Выполненные алерты [' +
                                                   str(len(db.executed_alerts_list(call.message.chat.id))) +
                                                   ']', callback_data='executed_alerts')
         kb.alMenu = InlineKeyboardMarkup(row_width=1).add(kb.active_alerts, kb.executed_alerts
@@ -1054,8 +1189,11 @@ async def change_settings_keyboard(user_id):
         kb.add_mail = InlineKeyboardButton("✏️Изменить адрес электронной почты", callback_data='add_mail')
     else:
         kb.add_mail = InlineKeyboardButton("🖨Добавить адрес электронной почты", callback_data='add_mail')
-    kb.settings_menu = InlineKeyboardMarkup(row_width=1).add(kb.mail_alert, kb.add_mail, kb.backToMainMenu)
+    kb.settings_menu = InlineKeyboardMarkup(row_width=1).add(kb.mail_alert, kb.add_mail, kb.data_transfer, kb.backToMainMenu)
 
+
+
+                    
 
 # обработчик кнопки "назад" при добавлении электронной почты
 @dp.callback_query_handler(lambda call: True, state="*")

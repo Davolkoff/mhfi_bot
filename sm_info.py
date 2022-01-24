@@ -9,6 +9,12 @@ import datetime  # модуль для получения времени
 from bs4 import BeautifulSoup  # Модуль для работы с HTML
 
 
+header = { 
+'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36', 
+'upgrade-insecure-requests': '1', 
+'cookie': 'mos_id=CllGxlx+PS20pAxcIuDnAgA=; session-cookie=158b36ec3ea4f5484054ad1fd21407333c874ef0fa4f0c8e34387efd5464a1e9500e2277b0367d71a273e5b46fa0869a; NSC_WBS-QUBG-jo-nptsv-WT-443=ffffffff0951e23245525d5f4f58455e445a4a423660; rheftjdd=rheftjddVal; _ym_uid=1552395093355938562; _ym_d=1552395093; _ym_isad=2' 
+}
+
 # получение цены бумаги с московской биржи
 def get_moex_price(ticker):
     url = "https://iss.moex.com/iss/securities/" + ticker + ".xml?iss.meta=off&iss.only=boards&boards.columns=secid," \
@@ -33,14 +39,14 @@ def get_moex_price(ticker):
 # получение цены бумаги с Yahoo Finance по тикеру
 def get_yahoo_price(ticker):
     answer = requests.get(
-        "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price").content
+        "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price", headers=header).content
     return json.loads(answer)["quoteSummary"]["result"][0]["price"]["regularMarketPrice"]["raw"]
 
 
 # получение валюты бумаги с Yahoo Finance по тикеру
 def get_yahoo_wallet(ticker):
     answer = requests.get(
-        "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price").content
+        "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price", headers=header).content
     return json.loads(answer)["quoteSummary"]["result"][0]["price"]["currency"]
 
 
@@ -54,9 +60,9 @@ def zacks_rank(ticker):
 def exchange(ticker):
     if ticker in tickers.moex_tickers:
         answer = requests.get(
-            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}.ME?modules=price").content
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}.ME?modules=price", headers=header).content
     else:
-        answer = requests.get(f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=price").content
+        answer = requests.get(f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=price", headers=header).content
     return json.loads(answer)["quoteSummary"]["result"][0]["price"]["exchange"]
 
 
@@ -65,9 +71,9 @@ def ytd_return(ticker):
     try:
         if ticker in tickers.moex_tickers:
             answer = requests.get(
-                f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}.ME?modules=defaultKeyStatistics").content
+                f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}.ME?modules=defaultKeyStatistics", headers=header).content
         else:
-            answer = requests.get(f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=defaultKeyStatistics").content
+            answer = requests.get(f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=defaultKeyStatistics", headers=header).content
         return "\n<b>Доход с начала года:</b> "+json.loads(answer)["quoteSummary"]["result"][0]["defaultKeyStatistics"]["ytdReturn"]["fmt"] + "\n\n"
     except:
         return ""
@@ -77,7 +83,7 @@ def ytd_return(ticker):
 def dividend(ticker):
     try:
         answer = requests.get(
-            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=defaultKeyStatistics").content
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=defaultKeyStatistics", headers=header).content
         return "\n<b>Дивидендная доходность:</b>" + json.loads(answer)["quoteSummary"]["result"][0]["defaultKeyStatistics"]["yield"]["fmt"] + "\n"
     except:
         return ""
@@ -87,9 +93,9 @@ def dividend(ticker):
 def long_name(ticker):
     if ticker in tickers.moex_tickers:
         answer = requests.get(
-            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + ".ME?modules=price").content
+            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + ".ME?modules=price", headers=header).content
     else:
-        answer = requests.get("https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price").content
+        answer = requests.get("https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price", headers=header).content
     return json.loads(answer)["quoteSummary"]["result"][0]["price"]["longName"]
 
 
@@ -103,10 +109,13 @@ def price_spr(ticker):
 
 # объединение функций получения цены с Мосбиржи и Yahoo Finance для расчётов
 def price(ticker):
-    if ticker in tickers.moex_tickers:
-        return get_moex_price(ticker)
-    else:
-        return get_yahoo_price(ticker)
+        if ticker in tickers.moex_tickers:
+            return get_moex_price(ticker)
+        elif ticker == "money":
+            return 1
+        else:
+            return get_yahoo_price(ticker)
+    
 
 
 # объединение функций YF и мосбиржи для получения валюты
@@ -170,11 +179,11 @@ def is_value(value):
 def day_price_change(ticker):
     if ticker in tickers.moex_tickers:
         answer = requests.get(
-            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + ".ME?modules=price").content
+            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + ".ME?modules=price", headers=header).content
         return float(json.loads(answer)["quoteSummary"]["result"][0]['price']['regularMarketChange']['fmt'])
     else:
         answer = requests.get(
-            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price").content
+            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price", headers=header).content
         return float(json.loads(answer)["quoteSummary"]["result"][0]['price']['regularMarketChange']['fmt'])
 
 
@@ -182,11 +191,11 @@ def day_price_change(ticker):
 def day_price_change_percent(ticker):
     if ticker in tickers.moex_tickers:
         answer = requests.get(
-            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + ".ME?modules=price").content
+            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + ".ME?modules=price", headers=header).content
         return float(str(json.loads(answer)["quoteSummary"]["result"][0]['price']['regularMarketChangePercent']['fmt']).replace("%",""))
     else:
         answer = requests.get(
-            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price").content
+            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + ticker + "?modules=price", headers=header).content
         return float(str(json.loads(answer)["quoteSummary"]["result"][0]['price']['regularMarketChangePercent']['fmt']).
                      replace("%",""))
 
@@ -207,11 +216,11 @@ def try_float(string):
 def sector_by_ticker(ticker):
     if ticker in tickers.moex_tickers:
         answer = requests.get(
-            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}.ME?modules=assetProfile").content
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}.ME?modules=assetProfile", headers=header).content
         return json.loads(answer)["quoteSummary"]["result"][0]["assetProfile"]["sector"]
     else:
         answer = requests.get(
-            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=assetProfile").content
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=assetProfile", headers=header).content
         return json.loads(answer)["quoteSummary"]["result"][0]["assetProfile"]["sector"]
 
 

@@ -18,7 +18,7 @@ mainMenu = InlineKeyboardMarkup(row_width=1).add(my_portfolios, info, alerts, ab
 # инициализация меню алертов
 active_alerts = InlineKeyboardButton('Активные алерты', callback_data='active_alerts')
 executed_alerts = InlineKeyboardButton('Выполненные алерты', callback_data='executed_alerts')
-add_alert = InlineKeyboardButton('Создать новый алерт', callback_data='add_alert')
+add_alert = InlineKeyboardButton('🔨Создать новый алерт', callback_data='add_alert')
 alMenu = InlineKeyboardMarkup(row_width=1).add(active_alerts, executed_alerts, add_alert, backToMainMenu)
 
 # меню активных и выполненных алертов
@@ -42,6 +42,9 @@ mode_select = InlineKeyboardMarkup(row_width=1).add(reaching, increased_vol, day
 
 # инициализация меню обратной связи
 feedback_menu = InlineKeyboardMarkup(row_width=1).add(backToMainMenu)
+
+# инициализация меню с информацией о нас
+about_us_menu = InlineKeyboardMarkup(row_width=1).add(backToMainMenu)
 
 # инициализация клавиатуры подтверждения добавления алерта
 accept = InlineKeyboardButton('Подтвердить', callback_data='accept')
@@ -73,20 +76,23 @@ standart_kb = InlineKeyboardMarkup().add(main_menu_button)
 
 # инициализация меню настроек
 mail_alert = InlineKeyboardButton("🔕Дублировать алерт на электронную почту: ВЫКЛ", callback_data='mail_alert')
-add_mail = InlineKeyboardButton("Добавить адрес электронной почты", callback_data='add_mail')
-settings_menu = InlineKeyboardMarkup(row_width=1).add(mail_alert, add_mail, backToMainMenu)
+add_mail = InlineKeyboardButton("✉️Добавить адрес электронной почты", callback_data='add_mail')
+data_transfer = InlineKeyboardButton("🔄Перенос данных", callback_data="data_transfer")
+settings_menu = InlineKeyboardMarkup(row_width=1).add(mail_alert, add_mail, data_transfer, backToMainMenu)
+
 
 # клавиатура для возвращения к настройкам
 backToSettingsMenu = InlineKeyboardButton("⬅ В настройки", callback_data="backToSettingsMenu")
 toSettings = InlineKeyboardMarkup().add(backToSettingsMenu)
 
+
 # инициализация меню редактирования активного алерта
-edit_ticker = InlineKeyboardButton('Редактировать тикер', callback_data='edit_ticker')
-edit_mode_and_value = InlineKeyboardButton('Редактировать режим и значение', callback_data='edit_mode_and_value')
-edit_time = InlineKeyboardButton('Редактировать время действия', callback_data='edit_time')
-edit_message = InlineKeyboardButton('Редактировать сообщение', callback_data='edit_message')
-delete_alert = InlineKeyboardButton('Удалить алерт', callback_data='delete_alert')
-off_alert = InlineKeyboardButton('Отключить алерт', callback_data='off_alert')
+edit_ticker = InlineKeyboardButton('🏷Редактировать тикер', callback_data='edit_ticker')
+edit_mode_and_value = InlineKeyboardButton('🎚Редактировать режим и значение', callback_data='edit_mode_and_value')
+edit_time = InlineKeyboardButton('⏰Редактировать время действия', callback_data='edit_time')
+edit_message = InlineKeyboardButton('✉️Редактировать сообщение', callback_data='edit_message')
+delete_alert = InlineKeyboardButton('🚫Удалить алерт', callback_data='delete_alert')
+off_alert = InlineKeyboardButton('⭕️Отключить алерт', callback_data='off_alert')
 back_to_active_alerts = InlineKeyboardButton('⬅ Назад', callback_data='active_alerts')
 edit_active_alert_menu = InlineKeyboardMarkup(row_width=1).add(edit_ticker, edit_mode_and_value, edit_time,
                                                                edit_message, off_alert, delete_alert,
@@ -124,6 +130,18 @@ eur_wallet = InlineKeyboardButton("EUR", callback_data='eur_wallet')
 wallet_menu = InlineKeyboardMarkup(row_width=3).add(usd_wallet, rub_wallet, eur_wallet)
 
 
+# инициализация меню переноса данных
+create_data_transfer_token = InlineKeyboardButton("🔧Создать токен для переноса данных", callback_data='create_data_transfer_token')
+enter_data_transfer_token = InlineKeyboardButton("✏️Ввести токен для переноса данных", callback_data='enter_data_transfer_token')
+data_transfer_menu = InlineKeyboardMarkup(row_width=1).add(create_data_transfer_token,enter_data_transfer_token, backToSettingsMenu, backToMainMenu)
+
+
+# инициализация меню подтверждения переноса данных
+transfer_accept = InlineKeyboardButton("✅Подтвердить", callback_data='transfer_accept')
+transfer_cancel = InlineKeyboardButton("🚫Отклонить", callback_data='transfer_cancel')
+transfer_acception_keyboard = InlineKeyboardMarkup().add(transfer_accept, transfer_cancel)
+
+# адаптивная клавиатура для вывода валюты из портфеля
 def adaptive_wallet_keyboard(wallets):
     adaptive_wallet_menu = InlineKeyboardMarkup()
     if "USD" in wallets:

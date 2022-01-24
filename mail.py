@@ -1,6 +1,9 @@
+from email import header
 import smtplib, ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+from rsa import verify
 from settings import email_login, email_password
 from re import *
 
@@ -21,9 +24,10 @@ def send_message(email, message_to_send, subject="Алерт"):
     msg['Subject'] = subject
     msg.attach(MIMEText(message_to_send, 'plain'))
     context = ssl.create_default_context()
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        
+        server.ehlo()
         server.login(email_login, email_password)
-        server.sendmail(
-            email_login, email, msg.as_string()
-        )
-        server.quit()
+        server.sendmail(email_login, email, msg.as_string())
+        server.close()
