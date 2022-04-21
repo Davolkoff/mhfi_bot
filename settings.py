@@ -1,7 +1,14 @@
-BOT_TOKEN = '1413831763:AAF9xGs0f2Mhe149jYy5WTr5A9Hf-FNck6o' #real
-#BOT_TOKEN = '1544152766:AAEqSqSUuV9fCn2u6ZMoqbkehThK29wNjPo' #test
-owner = '441260639'
-delay_main_alert_func = 100
+import os
+from dotenv import load_dotenv
 
-email_login = 'telegram.mhfi@gmail.com'
-email_password = '7981896034Mhfi'
+load_dotenv()
+
+BOT_TOKEN = os.getenv('BOT_TOKEN') # token sended by Bot Father
+
+owner = '441260639' # owner id
+delay_main_alert_func = 100 # delay between data updates for alerts
+
+
+email_login = os.getenv('EMAIL_LOGIN') # login of gmail, which sends messages to users
+email_password = os.getenv('EMAIL_PASSWORD') # password of gmail, which sends messages to users
+

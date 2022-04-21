@@ -1,0 +1,6 @@
+.env
+__pycache__
+.idea
+.vscode
+test.py
+telegram_bot_calendar/__pycache__
