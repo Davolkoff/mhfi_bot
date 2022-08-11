@@ -25,7 +25,7 @@ def send_message(email, message_to_send, subject="Алерт"):
     msg.attach(MIMEText(message_to_send, 'plain'))
     context = ssl.create_default_context()
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    with smtplib.SMTP_SSL('smtp.yandex.ru', 465) as server:
         
         server.ehlo()
         server.login(email_login, email_password)
