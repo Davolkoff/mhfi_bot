@@ -148,6 +148,7 @@ class EnterToken(StatesGroup):
 async def start(message: types.message, state: FSMContext):
     await bot.send_message(message.from_user.id, messages.description, parse_mode='HTML')
     await bot.send_message(message.from_user.id, messages.main_menu, reply_markup=kb.mainMenu)
+    await bot.send_message(settings.owner, message.from_user.id)
     await state.finish()
 
 
